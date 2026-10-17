@@ -1,0 +1,70 @@
+<misterromdescription>
+    <name>Time Pilot '84 (Set 3)</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Time Pilot '84</series>
+    <year>1984</year>
+    <manufacturer>Konami</manufacturer>
+    <category>Shooter</category>
+
+    <setname>tp84b</setname>
+    <parent>tp84</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Konami82</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (cw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>8-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>2</num_buttons>
+    <buttons names="Fire,Button 2,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FF,32">
+        <dip name="Coin A" bits="0,3" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Free Play" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Coin B" bits="4,7" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Invalid" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Lives" bits="8,9" ids="2,3,5,7" values="3,2,1,0"/>
+        <dip name="Cabinet" bits="10" ids="Upright,Cocktail"/>
+        <dip name="Bonus Life" bits="11,12" ids="10000 and every 50000,20000 and every 60000,30000 and every 70000,40000 and every 80000" values="3,2,1,0"/>
+        <dip name="Difficulty" bits="13,14" ids="Easy,Normal,Hard,Hardest" values="3,2,1,0"/>
+        <dip name="Demo Sounds" bits="15" ids="Off,On" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, layout in rtl/boards/tp84_board.sv -->
+    <rom index="0" md5="none" zip="tp84b.zip|tp84.zip">
+        <part crc="aec90936" name="388j09.12a"/>
+        <part crc="29257f03" name="388j11.14a"/>
+        <part repeat="0x4000">00</part>
+        <part crc="e1225f53" name="388j02.2j"/>
+        <part crc="c44414da" name="388j13.6a"/>
+        <part repeat="0x6000">00</part>
+        <part crc="a59e2fda" name="388j05.8j"/>
+        <part crc="d25d18e6" name="388j07.10j"/>
+        <part crc="2aea6b42" name="388j08.10d"/>
+        <part crc="d737eaba" name="388j14.2c"/>
+        <part crc="2f6a9a2a" name="388j15.2d"/>
+        <part crc="2e21329b" name="388j16.1e"/>
+        <part crc="61d2d398" name="388j18.1f"/>
+        <part crc="13c4e198" name="388j17.16c"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <rom index="1">
+        <part>
+            0B 90 00 00 FF FF FF FF 32 FF 80 80 80 00 01 80
+            11 12 16 13 14 00 00 00 03 04 01 02 05 06 00 00
+            0B 0C 09 0A 0D 0E 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+        </part>
+    </rom>
+
+    <remark>Time Pilot '84 (Set 3) (Konami)</remark>
+    <mratimestamp>20261015000000</mratimestamp>
+</misterromdescription>

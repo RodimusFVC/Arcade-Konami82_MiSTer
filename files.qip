@@ -9,11 +9,13 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/rocnrope_board.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/tutankhm_board.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/gyruss_board.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/circusc_board.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/tp84_board.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/video/k084.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/timeplt_sound.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/junofrst_sound.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/gyruss_sound.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/circusc_sound.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/tp84_sound.sv
 
 set_global_assignment -name QIP_FILE rtl/cpu/T80/T80.qip
 set_global_assignment -name QIP_FILE rtl/cpu/i8039/i8039.qip

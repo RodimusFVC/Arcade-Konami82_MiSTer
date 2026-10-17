@@ -66,6 +66,22 @@ REGION_OVERRIDE = {
         "maincpu":  (0, 0x10000, 0x10000),          # 6000-FFFF -> 0x16000
         "proms":    (0, 0x24000, 0x00220),
     },
+    "tp84": {                                       # rtl/boards/tp84_board.sv + rtl/sound/tp84_sound.sv
+        "cpu1":     (0, 0x10000, 0x10000),          # 8000-FFFF -> 0x18000
+        "sub":      "split",
+        "audiocpu": (0, 0x10000, 0x04000),
+        "tiles":    (0, 0x0C000, 0x04000),
+        "sprites":  (0, 0x00000, 0x08000),
+        "proms":    (0, 0x22000, 0x00500),
+    },
+    "tp84b": {                                      # same board, I/O moved to 0000-1FFF
+        "cpu1":     (0, 0x10000, 0x10000),          # 8000-FFFF -> 0x18000
+        "sub":      "split",
+        "audiocpu": (0, 0x10000, 0x04000),
+        "tiles":    (0, 0x0C000, 0x04000),
+        "sprites":  (0, 0x00000, 0x08000),
+        "proms":    (0, 0x22000, 0x00500),
+    },
     "rocnrope": {                                   # rtl/boards/rocnrope_board.sv
         "sprites":               (0, 0x00000, 0x08000),
         "timeplt_audio:tpsound": (0, 0x08000, 0x04000),   # every board: loading can't depend on the variant
@@ -80,6 +96,8 @@ REGION_SPLIT = {
     "tutankhm": {"maincpu": [(0x0A000, 0x06000, 0x00000),      # A000-FFFF
                              (0x10000, 0x09000, 0x10000)]},    # banks 0-8 (9-15 empty)
     "gyruss":   {"sub":     [(0x0E000, 0x02000, 0x06000)]},    # E000-FFFF
+    "tp84":     {"sub":     [(0x0E000, 0x02000, 0x20000)]},    # E000-FFFF, board-only
+    "tp84b":    {"sub":     [(0x0E000, 0x02000, 0x20000)]},
     "circusc":  {"sprites": [(0x00000, 0x08000, 0x00000),      # shared block 0
                              (0x08000, 0x04000, 0x20000)]},    # board-only
     "junofrst": {"maincpu": [(0x0A000, 0x06000, 0x00000),      # A000-FFFF
@@ -103,12 +121,15 @@ SUPPORTED = {
     ("junofrst", "empty_init"): 7,
     ("gyruss", "empty_init"): 8,
     ("circusc", "empty_init"): 9,
+    ("tp84", "empty_init"): 10,
+    ("tp84b", "empty_init"): 11,
 }
 
 BOARD_FILE = {0: "rtl/boards/timeplt_board.sv", 3: "rtl/boards/timeplt_board.sv", 4: "rtl/boards/timeplt_board.sv",
               5: "rtl/boards/timeplt_board.sv", 1: "rtl/boards/pooyan_board.sv", 2: "rtl/boards/rocnrope_board.sv",
               6: "rtl/boards/tutankhm_board.sv", 7: "rtl/boards/tutankhm_board.sv",
-              8: "rtl/boards/gyruss_board.sv", 9: "rtl/boards/circusc_board.sv"}
+              8: "rtl/boards/gyruss_board.sv", 9: "rtl/boards/circusc_board.sv",
+              10: "rtl/boards/tp84_board.sv", 11: "rtl/boards/tp84_board.sv"}
 
 # init -> (index 1 byte 2 CPU ROM decode, unused)
 DECODE = {"init_rocnrope": (0x01, 0)}               # rocnrope_board: byte 0x703D patched on read
@@ -130,7 +151,9 @@ PORTS_BY_MACHINE = {"rocnrope": [("SYSTEM",), ("P1",), ("P2",), ("DSW1",), ("DSW
                     "tutankhm": [("IN0",), ("IN1",), ("IN2",), ("DSW1",), ("DSW2",), ("COIN",)],
                     "junofrst": [("SYSTEM",), ("P1",), ("P2",), ("DSW1",), ("DSW2",), ("COIN",)],
                     "gyruss":   [("SYSTEM",), ("P1",), ("P2",), ("DSW1",), ("DSW2",), ("DSW3",)],
-                    "circusc":  [("SYSTEM",), ("P1",), ("P2",), ("DSW1",), ("DSW2",), ("DSW3",)]}
+                    "circusc":  [("SYSTEM",), ("P1",), ("P2",), ("DSW1",), ("DSW2",), ("DSW3",)],
+                    "tp84":     [("SYSTEM",), ("P1",), ("P2",), ("DSW1",), ("DSW2",), ("DSW3",)],
+                    "tp84b":    [("SYSTEM",), ("P1",), ("P2",), ("DSW1",), ("DSW2",), ("DSW3",)]}
 PORT_REWRITE = {}
 
 # control ids (Arcade-Konami82.sv)
@@ -159,7 +182,8 @@ RACK_HOLD, RACK_TOGGLE = 36, 37                     # Rack Test cheat button (no
 
 SERIES_BY_PARENT = {"timeplt": ("Time Pilot", "Shooter"), "pooyan": ("Pooyan", "Shooter"), "rocnrope": ("Roc'n Rope", "Platform"),
                     "tutankhm": ("Tutankham", "Maze"), "junofrst": ("Juno First", "Shooter"),
-                    "gyruss": ("Gyruss", "Shooter"), "circusc": ("Circus Charlie", "Platform")}
+                    "gyruss": ("Gyruss", "Shooter"), "circusc": ("Circus Charlie", "Platform"),
+                    "tp84": ("Time Pilot '84", "Shooter")}
 REGION_WORDS = [("US", "US"), ("Japan", "Japan"), ("Spanish", "Spain"), ("Italian", "Italy"), ("French", "France"),
                 ("Brazil", "Brazil"), ("Argentina", "Argentina"), ("Greek", "Greece"), ("Hungarian", "Hungary")]
 
@@ -524,7 +548,7 @@ def hiscore_xml(g):
         if line.startswith("@delay="):
             continue                                   # load delay directive: START_WAIT is measured instead
         f = line.split(",")
-        if f[0] != "@:maincpu" or f[1] != "program":
+        if f[0] not in ("@:maincpu", "@:cpu1") or f[1] != "program":     # tp84 names its main CPU cpu1
             raise SystemExit(f'{g["name"]}: unsupported hiscore.dat line {line}')
         ents.append((int(f[2], 16), int(f[3], 16), int(f[4], 16), int(f[5], 16)))
     rows = "\n".join(f"            {a >> 24 & 0xFF:02X} {a >> 16 & 0xFF:02X} {a >> 8 & 0xFF:02X} {a & 0xFF:02X} "

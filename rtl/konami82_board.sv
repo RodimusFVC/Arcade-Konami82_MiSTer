@@ -11,13 +11,14 @@
 //  Variant 1: Pooyan board (MAME pooyan.cpp: pooyan, pooyans, pootan)
 //  Variant 2: Roc'n Rope board (MAME rocnrope.cpp: rocnrope, rocnropek, ropeman)
 //  Variant 9: Circus Charlie board (MAME circusc.cpp: circusc, circusc2-4, circuscc, circusce), own sound board
+//  Variant 10/11: Time Pilot '84 board (MAME tp84.cpp: tp84, tp84a / tp84b), own sound board
 //  All but Juno First use the Time Pilot sound board, instanced once here. Its ROM sits at ioctl 0x08000 on every
 //  board: the variant byte arrives in index 1, after the ROMs, so loading must not depend on it.
 //  The board not selected is held in reset.
 //  ROMs: the three main index-0 windows are one shared RAM each (below); every board reads its ROMs from them,
 //  the active board's address selected by variant. Board-only images (PROMs, Juno First blitter/sound ROMs)
 //  stay in their boards. Port A loads the block during download and is a second read port otherwise (Gyruss).
-//  CPUs and sound chips are a pool too (below): z80_0 (main), z80_1 (sound), m6809_0, ay[0-4], mcs48_0, sn76489[0-1],
+//  CPUs and sound chips are a pool too (below): z80_0 (main), z80_1 (sound), m6809_0-1, ay[0-4], mcs48_0, sn76489[0-2],
 //  each driven by the active board's bus (rtl/chip_pool_pkg.sv).
 //
 //  ROM layout per board: see the board module header.
@@ -80,6 +81,7 @@ wire is_jf = variant == 8'd7;
 wire is_gy = variant == 8'd8;
 wire is_tk = variant == 8'd6 || is_jf;
 wire is_cc = variant == 8'd9;
+wire is_t8 = variant == 8'd10 || variant == 8'd11;
 
 logic        tp_ce, po_ce, rr_ce, tk_ce;
 logic  [7:0] tp_r, tp_g, tp_b, po_r, po_g, po_b, rr_r, rr_g, rr_b, tk_r, tk_g, tk_b;
@@ -102,6 +104,11 @@ logic  [7:0] cc_r, cc_g, cc_b, cc_latch, cc_hs_d;
 logic [14:0] cc_r0a;
 logic [13:0] cc_r1a;
 logic [15:0] cc_r2a, cc_r2b_a;
+logic        t8_ce, t8_hs, t8_vs, t8_hb, t8_vb, t8_irq;
+logic  [7:0] t8_r, t8_g, t8_b, t8_latch, t8_hs_d;
+logic [14:0] t8_r0a, t8_r0b_a;
+logic [13:0] t8_r1a;
+logic [15:0] t8_r2a, t8_r2b_a;
 
 /////////////////////////////  Shared CPU / sound chip pool  /////////////////////////////
 
@@ -125,10 +132,10 @@ assign z80_0_o.a = z80_0_a;           assign z80_0_o.dout = z80_0_do;
 assign z80_0_o.m1_n = z80_0_m1_n;     assign z80_0_o.mreq_n = z80_0_mreq_n; assign z80_0_o.iorq_n = z80_0_iorq_n;
 assign z80_0_o.rd_n = z80_0_rd_n;     assign z80_0_o.wr_n = z80_0_wr_n;     assign z80_0_o.rfsh_n = z80_0_rfsh_n;
 
-// Sound Z80: Time Pilot sound board, Juno First, Gyruss, Circus Charlie
-chip_pool_pkg::z80_i_t tp_z80_1_i, jf_z80_1_i, gy_z80_1_i, cc_z80_1_i, z80_1_i;
+// Sound Z80: Time Pilot sound board, Juno First, Gyruss, Circus Charlie, Time Pilot '84
+chip_pool_pkg::z80_i_t tp_z80_1_i, jf_z80_1_i, gy_z80_1_i, cc_z80_1_i, t8_z80_1_i, z80_1_i;
 chip_pool_pkg::z80_o_t z80_1_o;
-assign z80_1_i = is_cc ? cc_z80_1_i : is_gy ? gy_z80_1_i : is_jf ? jf_z80_1_i : tp_z80_1_i;
+assign z80_1_i = is_t8 ? t8_z80_1_i : is_cc ? cc_z80_1_i : is_gy ? gy_z80_1_i : is_jf ? jf_z80_1_i : tp_z80_1_i;
 
 wire [15:0] z80_1_a;
 wire  [7:0] z80_1_do;
@@ -145,10 +152,10 @@ assign z80_1_o.a = z80_1_a;           assign z80_1_o.dout = z80_1_do;
 assign z80_1_o.m1_n = z80_1_m1_n;     assign z80_1_o.mreq_n = z80_1_mreq_n; assign z80_1_o.iorq_n = z80_1_iorq_n;
 assign z80_1_o.rd_n = z80_1_rd_n;     assign z80_1_o.wr_n = z80_1_wr_n;     assign z80_1_o.rfsh_n = z80_1_rfsh_n;
 
-// MC6809E: Roc'n Rope, Tutankham / Juno First, Gyruss sub, Circus Charlie (Greg Miller's mc6809is, unmodified)
-chip_pool_pkg::m6809_i_t rr_m6809_0_i, tk_m6809_0_i, gy_m6809_0_i, cc_m6809_0_i, m6809_0_i;
+// MC6809E: Roc'n Rope, Tutankham / Juno First, Gyruss sub, Circus Charlie, Time Pilot '84 main (Greg Miller's mc6809is, unmodified)
+chip_pool_pkg::m6809_i_t rr_m6809_0_i, tk_m6809_0_i, gy_m6809_0_i, cc_m6809_0_i, t8_m6809_0_i, m6809_0_i;
 chip_pool_pkg::m6809_o_t m6809_0_o;
-assign m6809_0_i = is_cc ? cc_m6809_0_i : is_gy ? gy_m6809_0_i : is_tk ? tk_m6809_0_i : rr_m6809_0_i;
+assign m6809_0_i = is_t8 ? t8_m6809_0_i : is_cc ? cc_m6809_0_i : is_gy ? gy_m6809_0_i : is_tk ? tk_m6809_0_i : rr_m6809_0_i;
 
 wire [15:0] m6809_0_a;
 wire  [7:0] m6809_0_do;
@@ -162,6 +169,24 @@ mc6809is m6809_0
 );
 
 assign m6809_0_o.a = m6809_0_a;  assign m6809_0_o.dout = m6809_0_do;  assign m6809_0_o.rw = m6809_0_rw;  assign m6809_0_o.lic = m6809_0_lic;
+
+// Second MC6809E: Time Pilot '84 sub
+chip_pool_pkg::m6809_i_t t8_m6809_1_i, m6809_1_i;
+chip_pool_pkg::m6809_o_t m6809_1_o;
+assign m6809_1_i = t8_m6809_1_i;
+
+wire [15:0] m6809_1_a;
+wire  [7:0] m6809_1_do;
+wire        m6809_1_rw, m6809_1_lic;
+
+mc6809is m6809_1
+(
+    .CLK(clk), .fallE_en(m6809_1_i.fall_e), .fallQ_en(m6809_1_i.fall_q), .D(m6809_1_i.d), .DOut(m6809_1_do), .ADDR(m6809_1_a),
+    .RnW(m6809_1_rw), .BS(), .BA(), .nIRQ(m6809_1_i.irq_n), .nFIRQ(m6809_1_i.firq_n), .nNMI(m6809_1_i.nmi_n), .AVMA(), .BUSY(),
+    .LIC(m6809_1_lic), .nHALT(1'b1), .nRESET(~reset), .nDMABREQ(1'b1), .RegData()
+);
+
+assign m6809_1_o.a = m6809_1_a;  assign m6809_1_o.dout = m6809_1_do;  assign m6809_1_o.rw = m6809_1_rw;  assign m6809_1_o.lic = m6809_1_lic;
 
 // AY-3-8910 x 5: Time Pilot sound board uses 0-1, Juno First 0, Gyruss 0-4
 chip_pool_pkg::ay_i_t [1:0] tp_ay_i;
@@ -213,15 +238,17 @@ t8039_notri_extrom #(
 
 assign mcs48_0_o.p1 = mcu_p1;  assign mcs48_0_o.p2 = mcu_p2;  assign mcs48_0_o.pmem_a = mcu_pa;  assign mcs48_0_o.rd_n = mcu_rd_n;
 
-// SN76489A x 2: Circus Charlie (jt89, Jose Tejada)
+// SN76489A x 3: Circus Charlie 0-1, Time Pilot '84 0-2 (jt89, Jose Tejada)
 chip_pool_pkg::sn76489_i_t [1:0] cc_sn76489_i;
-chip_pool_pkg::sn76489_o_t [1:0] sn76489_o;
+chip_pool_pkg::sn76489_i_t [2:0] t8_sn76489_i;
+chip_pool_pkg::sn76489_o_t [2:0] sn76489_o;
 
 genvar si;
 generate
-    for (si = 0; si < 2; si = si + 1) begin : g_sn76489
+    for (si = 0; si < 3; si = si + 1) begin : g_sn76489
         chip_pool_pkg::sn76489_i_t i;
-        assign i = cc_sn76489_i[si];
+        if (si < 2) begin : gc assign i = is_t8 ? t8_sn76489_i[si] : cc_sn76489_i[si]; end
+        else        begin : gt assign i = t8_sn76489_i[si]; end
         wire [10:0] sound;
         wire        ready;
         jt89 sn76489
@@ -240,20 +267,20 @@ wire load_rom2 = ioctl_wr0 && ioctl_addr[24:16] == 9'h001;     // 0x10000-0x1FFF
 
 dpram_dc #(.widthad_a(15)) rom0
 (
-    .clock_a(clk), .address_a(load_rom0 ? ioctl_addr[14:0] : gy_r0b_a), .data_a(ioctl_dout), .wren_a(load_rom0), .q_a(rom0b_d),
-    .clock_b(clk), .address_b(is_cc ? cc_r0a : is_gy ? gy_r0a : is_tk ? tk_r0a : is_rr ? rr_r0a : is_po ? po_r0a : tp_r0a), .q_b(rom0_d)
+    .clock_a(clk), .address_a(load_rom0 ? ioctl_addr[14:0] : is_t8 ? t8_r0b_a : gy_r0b_a), .data_a(ioctl_dout), .wren_a(load_rom0), .q_a(rom0b_d),
+    .clock_b(clk), .address_b(is_t8 ? t8_r0a : is_cc ? cc_r0a : is_gy ? gy_r0a : is_tk ? tk_r0a : is_rr ? rr_r0a : is_po ? po_r0a : tp_r0a), .q_b(rom0_d)
 );
 
 dpram_dc #(.widthad_a(14)) rom1
 (
     .clock_a(clk), .address_a(load_rom1 ? ioctl_addr[13:0] : gy_r1b_a), .data_a(ioctl_dout), .wren_a(load_rom1), .q_a(rom1b_d),
-    .clock_b(clk), .address_b(is_cc ? cc_r1a : is_gy ? gy_r1a : is_tk ? tk_r1a : is_rr ? rr_r1a : is_po ? po_r1a : tp_r1a), .q_b(rom1_d)
+    .clock_b(clk), .address_b(is_t8 ? t8_r1a : is_cc ? cc_r1a : is_gy ? gy_r1a : is_tk ? tk_r1a : is_rr ? rr_r1a : is_po ? po_r1a : tp_r1a), .q_b(rom1_d)
 );
 
 dpram_dc #(.widthad_a(16)) rom2
 (
-    .clock_a(clk), .address_a(load_rom2 ? ioctl_addr[15:0] : is_cc ? cc_r2b_a : gy_r2b_a), .data_a(ioctl_dout), .wren_a(load_rom2), .q_a(rom2b_d),
-    .clock_b(clk), .address_b(is_cc ? cc_r2a : is_gy ? gy_r2a : is_tk ? tk_r2a : is_rr ? rr_r2a : is_po ? po_r2a : tp_r2a), .q_b(rom2_d)
+    .clock_a(clk), .address_a(load_rom2 ? ioctl_addr[15:0] : is_t8 ? t8_r2b_a : is_cc ? cc_r2b_a : gy_r2b_a), .data_a(ioctl_dout), .wren_a(load_rom2), .q_a(rom2b_d),
+    .clock_b(clk), .address_b(is_t8 ? t8_r2a : is_cc ? cc_r2a : is_gy ? gy_r2a : is_tk ? tk_r2a : is_rr ? rr_r2a : is_po ? po_r2a : tp_r2a), .q_b(rom2_d)
 );
 
 timeplt_board timeplt
@@ -452,15 +479,15 @@ tutankhm_board tutankhm
     .hs_write(hs_write & is_tk)
 );
 
-assign ce_pix       = is_cc ? cc_ce   : is_gy ? gy_ce   : is_tk ? tk_ce   : is_rr ? rr_ce   : is_po ? po_ce   : tp_ce;
-assign video_r      = is_cc ? cc_r    : is_gy ? gy_r    : is_tk ? tk_r    : is_rr ? rr_r    : is_po ? po_r    : tp_r;
-assign video_g      = is_cc ? cc_g    : is_gy ? gy_g    : is_tk ? tk_g    : is_rr ? rr_g    : is_po ? po_g    : tp_g;
-assign video_b      = is_cc ? cc_b    : is_gy ? gy_b    : is_tk ? tk_b    : is_rr ? rr_b    : is_po ? po_b    : tp_b;
-assign video_hs     = is_cc ? cc_hs   : is_gy ? gy_hs   : is_tk ? tk_hs   : is_rr ? rr_hs   : is_po ? po_hs   : tp_hs;
-assign video_vs     = is_cc ? cc_vs   : is_gy ? gy_vs   : is_tk ? tk_vs   : is_rr ? rr_vs   : is_po ? po_vs   : tp_vs;
-assign video_hblank = is_cc ? cc_hb   : is_gy ? gy_hb   : is_tk ? tk_hb   : is_rr ? rr_hb   : is_po ? po_hb   : tp_hb;
-assign video_vblank = is_cc ? cc_vb   : is_gy ? gy_vb   : is_tk ? tk_vb   : is_rr ? rr_vb   : is_po ? po_vb   : tp_vb;
-assign hs_data_out  = is_cc ? cc_hs_d : is_gy ? gy_hs_d : is_tk ? tk_hs_d : is_rr ? rr_hs_d : is_po ? po_hs_d : tp_hs_d;
+assign ce_pix       = is_t8 ? t8_ce   : is_cc ? cc_ce   : is_gy ? gy_ce   : is_tk ? tk_ce   : is_rr ? rr_ce   : is_po ? po_ce   : tp_ce;
+assign video_r      = is_t8 ? t8_r    : is_cc ? cc_r    : is_gy ? gy_r    : is_tk ? tk_r    : is_rr ? rr_r    : is_po ? po_r    : tp_r;
+assign video_g      = is_t8 ? t8_g    : is_cc ? cc_g    : is_gy ? gy_g    : is_tk ? tk_g    : is_rr ? rr_g    : is_po ? po_g    : tp_g;
+assign video_b      = is_t8 ? t8_b    : is_cc ? cc_b    : is_gy ? gy_b    : is_tk ? tk_b    : is_rr ? rr_b    : is_po ? po_b    : tp_b;
+assign video_hs     = is_t8 ? t8_hs   : is_cc ? cc_hs   : is_gy ? gy_hs   : is_tk ? tk_hs   : is_rr ? rr_hs   : is_po ? po_hs   : tp_hs;
+assign video_vs     = is_t8 ? t8_vs   : is_cc ? cc_vs   : is_gy ? gy_vs   : is_tk ? tk_vs   : is_rr ? rr_vs   : is_po ? po_vs   : tp_vs;
+assign video_hblank = is_t8 ? t8_hb   : is_cc ? cc_hb   : is_gy ? gy_hb   : is_tk ? tk_hb   : is_rr ? rr_hb   : is_po ? po_hb   : tp_hb;
+assign video_vblank = is_t8 ? t8_vb   : is_cc ? cc_vb   : is_gy ? gy_vb   : is_tk ? tk_vb   : is_rr ? rr_vb   : is_po ? po_vb   : tp_vb;
+assign hs_data_out  = is_t8 ? t8_hs_d : is_cc ? cc_hs_d : is_gy ? gy_hs_d : is_tk ? tk_hs_d : is_rr ? rr_hs_d : is_po ? po_hs_d : tp_hs_d;
 
 gyruss_board gyruss
 (
@@ -526,7 +553,7 @@ logic signed [15:0] tp_audio, jf_audio;
 timeplt_sound sound
 (
     .clk(clk),
-    .reset(reset | is_jf | is_gy | is_cc),
+    .reset(reset | is_jf | is_gy | is_cc | is_t8),
     .pause(pause),
     .ioctl_addr(ioctl_addr),
     .ioctl_dout(ioctl_dout),
@@ -656,11 +683,83 @@ circusc_sound cc_sound
     .z80_1_i(cc_z80_1_i),
     .z80_1_o(z80_1_o),
     .sn76489_i(cc_sn76489_i),
-    .sn76489_o(sn76489_o),
+    .sn76489_o(sn76489_o[1:0]),
     .audio(cc_audio)
 );
 
-assign audio_l = is_cc ? cc_audio : is_gy ? gy_audio_l : is_jf ? jf_audio : tp_audio;
-assign audio_r = is_cc ? cc_audio : is_gy ? gy_audio_r : is_jf ? jf_audio : tp_audio;
+/////////////////////////////  Time Pilot '84  /////////////////////////////
+
+tp84_board tp84
+(
+    .clk(clk),
+    .reset(reset | ~is_t8),
+    .pause(pause),
+    .b84(variant == 8'd11),
+    .ce_pix(t8_ce),
+
+    .in0(in0),
+    .in1(in1),
+    .in2(in2),
+    .dsw0(dsw0),
+    .dsw1(dsw1),
+
+    .ioctl_addr(ioctl_addr),
+    .ioctl_dout(ioctl_dout),
+    .ioctl_wr0(ioctl_wr0),
+    .rom0_a(t8_r0a),
+    .rom0_d(rom0_d),
+    .rom0b_a(t8_r0b_a),
+    .rom0b_d(rom0b_d),
+    .rom1_a(t8_r1a),
+    .rom1_d(rom1_d),
+    .rom2_a(t8_r2a),
+    .rom2_d(rom2_d),
+
+    .crt_flip(crt_flip),
+    .h_adj(h_adj),
+    .v_adj(v_adj),
+
+    .video_r(t8_r),
+    .video_g(t8_g),
+    .video_b(t8_b),
+    .video_hs(t8_hs),
+    .video_vs(t8_vs),
+    .video_hblank(t8_hb),
+    .video_vblank(t8_vb),
+
+    .snd_latch(t8_latch),
+    .snd_irq(t8_irq),
+
+    .m6809_0_i(t8_m6809_0_i),
+    .m6809_0_o(m6809_0_o),
+    .m6809_1_i(t8_m6809_1_i),
+    .m6809_1_o(m6809_1_o),
+
+    .hs_address(hs_address),
+    .hs_data_in(hs_data_in),
+    .hs_data_out(t8_hs_d),
+    .hs_write(hs_write & is_t8)
+);
+
+logic signed [15:0] t8_audio;
+
+tp84_sound t8_sound
+(
+    .clk(clk),
+    .reset(reset | ~is_t8),
+    .pause(pause),
+    .z80_rom_a(t8_r2b_a),
+    .z80_rom_d(rom2b_d),
+    .latch(t8_latch),
+    .irq_trig(t8_irq),
+    .z80_1_i(t8_z80_1_i),
+    .z80_1_o(z80_1_o),
+    .sn76489_i(t8_sn76489_i),
+    .sn76489_o(sn76489_o),
+    .audio(t8_audio)
+);
+
+assign audio_l = is_t8 ? t8_audio : is_cc ? cc_audio : is_gy ? gy_audio_l : is_jf ? jf_audio : tp_audio;
+assign audio_r = is_t8 ? t8_audio : is_cc ? cc_audio : is_gy ? gy_audio_r : is_jf ? jf_audio : tp_audio;
 
 endmodule
