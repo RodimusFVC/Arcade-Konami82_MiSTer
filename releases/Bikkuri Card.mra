@@ -1,0 +1,62 @@
+<misterromdescription>
+    <name>Bikkuri Card</name>
+    <region>Japan</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Bikkuri Card</series>
+    <year>1987</year>
+    <manufacturer>Peni</manufacturer>
+    <category>Maze</category>
+
+    <setname>bikkuric</setname>
+    <parent>bikkuric</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Konami82</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (cw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>8-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>6</num_buttons>
+    <buttons names="Fire,Not Used,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Key Out,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FF">
+        <dip name="Coin A" bits="0" ids="2C/1C,1C/1C" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, layout in rtl/boards/timeplt_board.sv -->
+    <rom index="0" md5="none" zip="bikkuric.zip">
+        <part crc="e8d595ab" name="1.a16"/>
+        <part crc="63fd7d53" name="2.a14"/>
+        <part repeat="0x2000">00</part>
+        <part crc="bc438531" name="5.l3"/>
+        <part repeat="0x2000">00</part>
+        <part crc="74e8a64b" name="3.d4" offset="0x0" length="0x4000"/>
+        <part crc="d303942d" name="4.h8"/>
+        <part repeat="0x2000">00</part>
+        <part crc="34c91839" name="3.2j"/>
+        <part crc="463b2b07" name="2.1h"/>
+        <part crc="4bbb2150" name="4.10h"/>
+        <part crc="f7b7663e" name="1.2b"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <rom index="1">
+        <part>
+            04 90 00 00 FF FF FF FF FF FF 80 80 80 80 00 80
+            11 12 21 00 00 00 00 00 03 00 01 02 05 04 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+        </part>
+    </rom>
+
+    <remark>Bikkuri Card (Japan) (Peni)</remark>
+    <mratimestamp>20261015000000</mratimestamp>
+</misterromdescription>

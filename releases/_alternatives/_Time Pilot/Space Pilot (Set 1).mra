@@ -1,0 +1,70 @@
+<misterromdescription>
+    <name>Space Pilot (Set 1)</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>yes</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Time Pilot</series>
+    <year>1982</year>
+    <manufacturer>bootleg</manufacturer>
+    <category>Shooter</category>
+
+    <setname>spaceplt</setname>
+    <parent>timeplt</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Konami82</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (cw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>8-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>1</num_buttons>
+    <buttons names="Fire,Not Used,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FF,4B">
+        <dip name="Coin A" bits="0,3" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Free Play" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Coin B" bits="4,7" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Free Play" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Lives" bits="8,9" ids="3,4,5,255 (Cheat)" values="3,2,1,0"/>
+        <dip name="Cabinet" bits="10" ids="Upright,Cocktail"/>
+        <dip name="Bonus Life" bits="11" ids="10000 50000,20000 60000" values="1,0"/>
+        <dip name="Difficulty" bits="12,14" ids="1 (Easiest),2,3,4,5,6,7,8 (Difficult)" values="7,6,5,4,3,2,1,0"/>
+        <dip name="Demo Sounds" bits="15" ids="Off,On" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, layout in rtl/boards/timeplt_board.sv -->
+    <rom index="0" md5="none" zip="spaceplt.zip|timeplt.zip">
+        <part crc="ac8ca3ae" name="sp1"/>
+        <part crc="1f0308ef" name="sp2"/>
+        <part crc="90aeca50" name="sp3"/>
+        <part repeat="0x2000">00</part>
+        <part crc="d66da813" name="tm7"/>
+        <part repeat="0x3000">00</part>
+        <part crc="76caa8af" name="sp6"/>
+        <part repeat="0x2000">00</part>
+        <part crc="3781ce7a" name="sp4"/>
+        <part crc="e8ca87b9" name="tm5"/>
+        <part crc="34c91839" name="timeplt.b4"/>
+        <part crc="463b2b07" name="timeplt.b5"/>
+        <part crc="4bbb2150" name="timeplt.e9"/>
+        <part crc="f7b7663e" name="timeplt.e12"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <rom index="1">
+        <part>
+            00 90 00 00 FF FF FF FF 4B FF 80 80 80 00 01 80
+            11 12 16 13 14 00 00 00 03 04 01 02 05 00 00 00
+            0B 0C 09 0A 0D 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+        </part>
+    </rom>
+
+    <remark>Space Pilot (Set 1) (Bootleg)</remark>
+    <mratimestamp>20261015000000</mratimestamp>
+</misterromdescription>

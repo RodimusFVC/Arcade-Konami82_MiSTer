@@ -1,0 +1,76 @@
+<misterromdescription>
+    <name>Circus Charlie (Centuri, Earlier)</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Circus Charlie</series>
+    <year>1984</year>
+    <manufacturer>Konami (Centuri license)</manufacturer>
+    <category>Platform</category>
+
+    <setname>circusce</setname>
+    <parent>circusc</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Konami82</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (cw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>2-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>1</num_buttons>
+    <buttons names="Fire,Not Used,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FF,4B">
+        <dip name="Coin A" bits="0,3" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Free Play" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Coin B" bits="4,7" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Free Play" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Lives" bits="8,9" ids="3,4,5,7" values="3,2,1,0"/>
+        <dip name="Cabinet" bits="10" ids="Upright,Cocktail"/>
+        <dip name="Bonus Life" bits="11" ids="20k 90k 70k+,30k 110k 80k+" values="1,0"/>
+        <dip name="Difficulty" bits="13,14" ids="Easy,Normal,Hard,Hardest" values="3,2,1,0"/>
+        <dip name="Demo Sounds" bits="15" ids="Off,On" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, layout in rtl/boards/circusc_board.sv -->
+    <rom index="0" md5="none" zip="circusce.zip|circusc.zip">
+        <part crc="df0405c6" name="380_j06.11e"/>
+        <part crc="23dfe3a6" name="380_j07.12e"/>
+        <part crc="3ba95390" name="380_j08.13e"/>
+        <part crc="a9fba85a" name="380_j09.14e"/>
+        <part repeat="0x4000">00</part>
+        <part crc="56e5b408" name="380_j12.4a"/>
+        <part crc="5aca0193" name="380_j13.5a"/>
+        <part crc="607df0fb" name="380_l14.5c"/>
+        <part crc="a6ad30e1" name="380_l15.7c"/>
+        <part repeat="0x2000">00</part>
+        <part crc="7ca74494" name="380_p05.3h"/>
+        <part crc="dd0c0ee7" name="380_p04.4h"/>
+        <part crc="190247af" name="380_p03.5h"/>
+        <part crc="7e63725e" name="380_p02.6h"/>
+        <part crc="eedaa5b2" name="380_p01.7h"/>
+        <part crc="0532347e" name="380_j10.15e"/>
+        <part crc="e1725d24" name="380_j11.16e"/>
+        <part crc="10dd4eaa" name="380_j18.2a"/>
+        <part crc="13989357" name="380_j17.7b"/>
+        <part crc="c244f2aa" name="380_j16.10c"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <rom index="1">
+        <part>
+            09 90 00 00 FF FF FF FF 4B FF 80 80 80 00 01 80
+            11 12 16 13 14 00 00 00 03 04 00 00 05 00 00 00
+            0B 0C 00 00 0D 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+        </part>
+    </rom>
+
+    <remark>Circus Charlie (Centuri, Earlier) (Konami (Centuri License))</remark>
+    <mratimestamp>20261015000000</mratimestamp>
+</misterromdescription>

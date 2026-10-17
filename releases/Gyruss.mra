@@ -1,0 +1,75 @@
+<misterromdescription>
+    <name>Gyruss</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Gyruss</series>
+    <year>1983</year>
+    <manufacturer>Konami</manufacturer>
+    <category>Shooter</category>
+
+    <setname>gyruss</setname>
+    <parent>gyruss</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Konami82</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (cw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>8-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>1</num_buttons>
+    <buttons names="Fire,Not Used,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FF,3B,FE">
+        <dip name="Coin A" bits="0,3" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Free Play" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Coin B" bits="4,7" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Free Play" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Lives" bits="8,9" ids="3,4,5,255 (Cheat)" values="3,2,1,0"/>
+        <dip name="Cabinet" bits="10" ids="Upright,Cocktail"/>
+        <dip name="Bonus Life" bits="11" ids="30k 90k 60k+,40k 110k 70k+" values="1,0"/>
+        <dip name="Difficulty" bits="12,14" ids="1 (Easiest),2,3,4,5 (Average),6,7,8 (Hardest)" values="7,6,5,4,3,2,1,0"/>
+        <dip name="Demo Sounds" bits="15" ids="Off,On" values="1,0"/>
+        <dip name="Demo Music" bits="16" ids="Off,On" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, layout in rtl/boards/gyruss_board.sv -->
+    <rom index="0" md5="none" zip="gyruss.zip">
+        <part crc="c673b43d" name="gyrussk.1"/>
+        <part crc="a4ec03e4" name="gyrussk.2"/>
+        <part crc="27454a98" name="gyrussk.3"/>
+        <part crc="822bf27e" name="gyrussk.9"/>
+        <part repeat="0x4000">00</part>
+        <part crc="27d8329b" name="gyrussk.4"/>
+        <part crc="3f9b5dea" name="gyrussk.3a"/>
+        <part repeat="0x1000">00</part>
+        <part crc="c949db10" name="gyrussk.6"/>
+        <part crc="4f22411a" name="gyrussk.5"/>
+        <part crc="47cd1fbc" name="gyrussk.8"/>
+        <part crc="8e8d388c" name="gyrussk.7"/>
+        <part crc="f4ae1c17" name="gyrussk.1a"/>
+        <part crc="ba498115" name="gyrussk.2a"/>
+        <part repeat="0x4000">00</part>
+        <part crc="98782db3" name="gyrussk.pr3"/>
+        <part crc="7ed057de" name="gyrussk.pr1"/>
+        <part crc="de823a81" name="gyrussk.pr2"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <rom index="1">
+        <part>
+            08 90 00 00 FF FF FF FF 3B FE 80 80 80 00 01 02
+            11 12 16 13 14 00 00 00 03 04 01 02 05 00 00 00
+            0B 0C 09 0A 0D 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+        </part>
+    </rom>
+
+    <remark>Gyruss (Konami)</remark>
+    <mratimestamp>20261015000000</mratimestamp>
+</misterromdescription>

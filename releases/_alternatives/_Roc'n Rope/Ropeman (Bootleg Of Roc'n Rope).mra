@@ -1,0 +1,76 @@
+<misterromdescription>
+    <name>Ropeman (Bootleg Of Roc'n Rope)</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>yes</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Roc'n Rope</series>
+    <year>1983</year>
+    <manufacturer>bootleg</manufacturer>
+    <category>Platform</category>
+
+    <setname>ropeman</setname>
+    <parent>rocnrope</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Konami82</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (ccw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>4-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>2</num_buttons>
+    <buttons names="Fire,Button 2,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FF,5B,96">
+        <dip name="Coin A" bits="0,3" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Free Play" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Coin B" bits="4,7" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,No Coin B" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Lives" bits="8,9" ids="3,4,5,255 (Cheat)" values="3,2,1,0"/>
+        <dip name="Cabinet" bits="10" ids="Upright,Cocktail"/>
+        <dip name="Difficulty" bits="11,14" ids="1 (Easy),2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 (Difficult)" values="15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0"/>
+        <dip name="Demo Sounds" bits="15" ids="Off,On" values="1,0"/>
+        <dip name="First Bonus" bits="16,18" ids="20000,20000,30000,40000,50000,60000,70000,80000" values="7,6,5,4,3,2,1,0"/>
+        <dip name="Repeated Bonus" bits="19,21" ids="40000,40000,40000,40000,50000,60000,70000,80000" values="7,6,5,4,3,2,1,0"/>
+        <dip name="Grant Repeated Bonus" bits="22" ids="No,Yes" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, layout in rtl/boards/rocnrope_board.sv -->
+    <rom index="0" md5="none" zip="ropeman.zip|rocnrope.zip">
+        <part crc="afdaba5e" name="r10.11a"/>
+        <part crc="054cafeb" name="r11.12a"/>
+        <part crc="9d2166b2" name="r8.9a"/>
+        <part crc="aff6e22f" name="r9.10a"/>
+        <part crc="75d2c4e2" name="r12.7a"/>
+        <part crc="ca4325ae" name="r13.8a"/>
+        <part repeat="0x2000">00</part>
+        <part crc="cd8ac4bf" name="r7.12j"/>
+        <part crc="35891835" name="r6.11j"/>
+        <part repeat="0x6000">00</part>
+        <part crc="6310a1fe" name="r1.1j"/>
+        <part crc="75af8697" name="r2.2j"/>
+        <part crc="b21372b1" name="r3.3j"/>
+        <part crc="7acb2a05" name="r4.4j"/>
+        <part crc="150a6264" name="r5.5j"/>
+        <part crc="22ad2c3e" name="1.17a"/>
+        <part crc="750a9677" name="2.16b"/>
+        <part crc="b5c75a27" name="3.16g"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <rom index="1">
+        <part>
+            02 11 01 00 FF FF FF FF 5B 96 80 80 80 00 01 02
+            11 12 16 13 14 00 00 00 03 04 01 02 05 06 00 00
+            0B 0C 09 0A 0D 0E 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+        </part>
+    </rom>
+
+    <remark>Ropeman (Bootleg Of Roc'n Rope)</remark>
+    <mratimestamp>20261015000000</mratimestamp>
+</misterromdescription>

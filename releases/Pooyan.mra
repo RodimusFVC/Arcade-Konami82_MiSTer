@@ -1,0 +1,72 @@
+<misterromdescription>
+    <name>Pooyan</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Pooyan</series>
+    <year>1982</year>
+    <manufacturer>Konami</manufacturer>
+    <category>Shooter</category>
+
+    <setname>pooyan</setname>
+    <parent>pooyan</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Konami82</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (cw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>2-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>1</num_buttons>
+    <buttons names="Fire,Not Used,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FF,7B">
+        <dip name="Coin A" bits="0,3" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Free Play" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Coin B" bits="4,7" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Invalid" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Lives" bits="8,9" ids="3,4,5,255 (Cheat)" values="3,2,1,0"/>
+        <dip name="Cabinet" bits="10" ids="Upright,Cocktail"/>
+        <dip name="Bonus Life" bits="11" ids="50K 80K+,30K 70K+" values="1,0"/>
+        <dip name="Difficulty" bits="12,14" ids="1 (Easy),2,3,4,5,6,7,8 (Hard)" values="7,6,5,4,3,2,1,0"/>
+        <dip name="Demo Sounds" bits="15" ids="Off,On" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, layout in rtl/boards/pooyan_board.sv -->
+    <rom index="0" md5="none" zip="pooyan.zip">
+        <part crc="bb319c63" name="1.4a"/>
+        <part crc="a1463d98" name="2.5a"/>
+        <part crc="fe1a9e08" name="3.6a"/>
+        <part crc="9e0f9bcc" name="4.7a"/>
+        <part crc="fbe2b368" name="xx.7a"/>
+        <part crc="e1795b3d" name="xx.8a"/>
+        <part repeat="0x2000">00</part>
+        <part crc="931b29eb" name="8.10g"/>
+        <part crc="bbe6d6e4" name="7.9g"/>
+        <part repeat="0x2000">00</part>
+        <part crc="b2d8c121" name="6.9a"/>
+        <part crc="1097c2b6" name="5.8a"/>
+        <part repeat="0x2000">00</part>
+        <part crc="a06a6d0e" name="pooyan.pr1"/>
+        <part crc="8cd4cd60" name="pooyan.pr3"/>
+        <part crc="82748c0b" name="pooyan.pr2"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <rom index="1">
+        <part>
+            01 90 00 00 FF FF FF FF 7B FF 80 80 80 00 01 80
+            11 12 16 13 14 00 00 00 00 00 01 02 05 00 00 00
+            00 00 09 0A 0D 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+        </part>
+    </rom>
+
+    <remark>Pooyan (Konami)</remark>
+    <mratimestamp>20261015000000</mratimestamp>
+</misterromdescription>

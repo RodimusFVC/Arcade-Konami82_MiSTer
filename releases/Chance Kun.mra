@@ -1,0 +1,69 @@
+<misterromdescription>
+    <name>Chance Kun</name>
+    <region>Japan</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Chance Kun</series>
+    <year>1988</year>
+    <manufacturer>Peni</manufacturer>
+    <category>Maze</category>
+
+    <setname>chkun</setname>
+    <parent>chkun</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Konami82</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (cw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>8-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>6</num_buttons>
+    <buttons names="Fire,Bet 1B,Bet 2B,Bet 3B,Coin,Start 1P,Start 2P,Pause,Bet HR,Key Out,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="7F,FF">
+        <dip name="Service Mode" bits="6" ids="Off,On" values="1,0"/>
+        <dip name="Freeze" bits="7" ids="Off,On"/>
+        <dip name="Coin A" bits="8" ids="2C/1C,1C/1C" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, layout in rtl/boards/timeplt_board.sv -->
+    <rom index="0" md5="none" zip="chkun.zip">
+        <part crc="c5879f9b" name="n1.16a"/>
+        <part crc="80cc55da" name="12.14a"/>
+        <part repeat="0x2000">00</part>
+        <part crc="1f1463ca" name="15.3l"/>
+        <part repeat="0x2000">00</part>
+        <part crc="776427c0" name="13.4d"/>
+        <part crc="0cb76a48" name="14.8h"/>
+        <part crc="34c91839" name="3.2j"/>
+        <part crc="463b2b07" name="2.1h"/>
+        <part crc="4bbb2150" name="4.10h"/>
+        <part crc="adfa399a" name="mb7114e.2b"/>
+    </rom>
+
+    <!-- Index 2: SDRAM (large banked ROM regions) -->
+    <rom index="2" md5="none" zip="chkun.zip">
+        <part crc="d5ca802d" name="v1.8k"/>
+        <part crc="70e902eb" name="v2.9k"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <rom index="1">
+        <part>
+            05 90 00 00 FF FF FF 7F FF FF 80 80 80 00 01 80
+            11 12 21 13 00 00 00 00 08 00 06 07 05 20 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+        </part>
+    </rom>
+
+    <remark>Chance Kun (Japan) (Peni)</remark>
+    <mratimestamp>20261015000000</mratimestamp>
+</misterromdescription>

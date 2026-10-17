@@ -1,0 +1,77 @@
+<misterromdescription>
+    <name>Power Surge</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Power Surge</series>
+    <year>1988</year>
+    <manufacturer>Vision Electronics</manufacturer>
+    <category>Maze</category>
+
+    <setname>psurge</setname>
+    <parent>psurge</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Konami82</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (ccw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>8-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>1</num_buttons>
+    <buttons names="Fire,Not Used,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FF,7F">
+        <dip name="Unknown" bits="0" ids="Off,On" values="1,0"/>
+        <dip name="Unknown" bits="1" ids="Off,On" values="1,0"/>
+        <dip name="Unknown" bits="2" ids="Off,On" values="1,0"/>
+        <dip name="Initial Energy" bits="3" ids="4,6"/>
+        <dip name="Lives" bits="4,5" ids="3,4,5,6" values="3,2,1,0"/>
+        <dip name="Unknown" bits="6" ids="Off,On" values="1,0"/>
+        <dip name="Cabinet" bits="7" ids="Upright,Cocktail" values="1,0"/>
+        <dip name="Coin A" bits="8,9" ids="2C/1C,1C/1C,1C/3C,1C/5C" values="2,3,1,0"/>
+        <dip name="Coin B" bits="10,11" ids="2C/1C,1C/1C,1C/3C,1C/5C" values="2,3,1,0"/>
+        <dip name="Infinite Shots (Cheat)" bits="12" ids="Off,On" values="1,0"/>
+        <dip name="Unknown" bits="13" ids="Off,On" values="1,0"/>
+        <dip name="Unknown" bits="14" ids="Off,On" values="1,0"/>
+        <dip name="Stop at Junctions" bits="15" ids="No,Yes" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, layout in rtl/boards/timeplt_board.sv -->
+    <rom index="0" md5="none" zip="psurge.zip">
+        <part crc="05f9ba12" name="p1"/>
+        <part crc="3ff41576" name="p2"/>
+        <part crc="e8fe120a" name="p3"/>
+        <part repeat="0x2000">00</part>
+        <part crc="b52d01fa" name="p6"/>
+        <part crc="9db5c0ce" name="p7"/>
+        <part repeat="0x2000">00</part>
+        <part crc="26fd7f81" name="p4"/>
+        <part repeat="0x2000">00</part>
+        <part crc="6066ec8e" name="p5"/>
+        <part crc="e8ca87b9" name="tm5"/>
+        <part crc="34c91839" name="timeplt.b4"/>
+        <part crc="463b2b07" name="timeplt.b5"/>
+        <part crc="4bbb2150" name="timeplt.e9"/>
+        <part crc="f7b7663e" name="timeplt.e12"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <rom index="1">
+        <part>
+            03 10 00 00 FF FF FF FF 7F FF 80 80 80 00 01 80
+            11 12 16 13 14 00 00 00 03 04 01 02 05 00 00 00
+            0B 0C 09 0A 0D 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+        </part>
+    </rom>
+
+    <remark>Power Surge (Vision Electronics)</remark>
+    <mratimestamp>20261015000000</mratimestamp>
+</misterromdescription>
