@@ -29,8 +29,8 @@ module gyruss_sound
     input  logic  [7:0] latch,          // main CPU sound command (C100)
     input  logic        irq_trig,       // main CPU C080 write: interrupts the Z80
 
-    output chip_pool_pkg::z80_i_t   z80_1_i,           // shared sound Z80 (rtl/konami82_board.sv)
-    input  chip_pool_pkg::z80_o_t   z80_1_o,
+    output chip_pool_pkg::z80r_i_t   z80_1_i,           // shared sound Z80 (rtl/konami82_board.sv)
+    input  chip_pool_pkg::z80r_o_t   z80_1_o,
     output chip_pool_pkg::ay_i_t  [4:0] ay_i,      // shared AYs (rtl/konami82_board.sv)
     input  chip_pool_pkg::ay_o_t  [4:0] ay_o,
     output chip_pool_pkg::mcs48_i_t mcs48_0_i,          // shared 8039 (rtl/konami82_board.sv)
@@ -79,6 +79,7 @@ logic        m1_n, mreq_n, iorq_n, rd_n, wr_n, rfsh_n;
 logic        irq_ff = 1'b0;
 
 // Sound CPU: the shared T80 in rtl/konami82_board.sv
+assign z80_1_i.reset_n = ~reset;              // core reset, or the board watchdog (rtl/konami82_board.sv)
 assign z80_1_i.ce    = cpu_ce;
 assign z80_1_i.int_n = ~irq_ff;
 assign z80_1_i.nmi_n = 1'b1;
@@ -139,6 +140,22 @@ always_comb begin
     endcase
 end
 
+// AY channel level as seen at the board: each output drives a 3.3K load (MAME AY8910_DISCRETE_OUTPUT,
+// set_resistors_load 3.3K, ay8910_param), which compresses the volume steps: step 14 = 0.85 of step 15, 12 = 0.57,
+// 8 = 0.17 (jt49's ideal table: 0.71 / 0.35 / 0.09). jt49 level in, loaded level (0-255 above the step-0 offset) out.
+function automatic [7:0] ay_load(input [7:0] v);
+    case (v)
+        8'd0: ay_load = 8'd0;    8'd1: ay_load = 8'd0;    8'd2: ay_load = 8'd7;    8'd3: ay_load = 8'd9;
+        8'd4: ay_load = 8'd12;   8'd5: ay_load = 8'd12;   8'd6: ay_load = 8'd16;   8'd7: ay_load = 8'd16;
+        8'd9: ay_load = 8'd22;   8'd11: ay_load = 8'd22;  8'd13: ay_load = 8'd34;  8'd15: ay_load = 8'd34;
+        8'd18: ay_load = 8'd42;  8'd22: ay_load = 8'd42;  8'd26: ay_load = 8'd67;  8'd31: ay_load = 8'd67;
+        8'd37: ay_load = 8'd89;  8'd45: ay_load = 8'd89;  8'd53: ay_load = 8'd114; 8'd63: ay_load = 8'd114;
+        8'd75: ay_load = 8'd146; 8'd90: ay_load = 8'd146; 8'd107: ay_load = 8'd176; 8'd127: ay_load = 8'd176;
+        8'd151: ay_load = 8'd217; 8'd180: ay_load = 8'd217; 8'd214: ay_load = 8'd255; 8'd255: ay_load = 8'd255;
+        default: ay_load = 8'd0;
+    endcase
+endfunction
+
 logic [7:0] ay_do[5];
 logic [7:0] ay_a[5], ay_b[5], ay_c[5];
 logic [7:0] ay1_pb, ay2_pb;
@@ -155,9 +172,15 @@ generate
         assign ay_i[gi].ioa_in = (gi == 2) ? timer : 8'hFF;
         assign ay_i[gi].iob_in = 8'hFF;
         assign ay_do[gi] = ay_o[gi].dout;
-        assign ay_a[gi]  = ay_o[gi].a;
-        assign ay_b[gi]  = ay_o[gi].b;
-        assign ay_c[gi]  = ay_o[gi].c;
+        logic [7:0] la = 8'd0, lb = 8'd0, lc = 8'd0;
+        always_ff @(posedge clk) begin
+            la <= ay_load(ay_o[gi].a);
+            lb <= ay_load(ay_o[gi].b);
+            lc <= ay_load(ay_o[gi].c);
+        end
+        assign ay_a[gi]  = la;
+        assign ay_b[gi]  = lb;
+        assign ay_c[gi]  = lc;
     end
 endgenerate
 
@@ -275,7 +298,8 @@ always_ff @(posedge clk) begin
 end
 
 // Per side: one-pole ~8 kHz (mixer feedback 200 ohm / 0.1u, MAME konami_*_mixer_desc), one-pole ~15 kHz
-// (keeps AY ultrasonic tones out of the 48 kHz output), DC removal ~9 Hz, gain, saturate.
+// (keeps AY ultrasonic tones out of the 48 kHz output), DC removal ~2 Hz (MAME's 1u output cap ~1.6 Hz; at ~9 Hz a
+// noise burst starting at full volume came out as a one-swing spike), gain, saturate.
 function automatic signed [15:0] sat16(input signed [24:0] v);
     sat16 = v > 25'sd32767 ? 16'sd32767 : v < -25'sd32768 ? -16'sd32768 : v[15:0];
 endfunction
@@ -288,7 +312,7 @@ generate
         wire signed [29:0] da = $signed({1'b0, mix_in, 16'd0}) - $signed({1'b0, lpa});
         wire signed [29:0] db = $signed({1'b0, lpa}) - $signed({1'b0, lpb});
         wire signed [29:0] dd = $signed({1'b0, lpb}) - $signed({1'b0, dc});
-        wire signed [29:0] ds = dd >>> 12;
+        wire signed [29:0] ds = dd >>> 14;
         wire signed [46:0] pa = da * $signed(17'sd13188);
         wire signed [46:0] pb = db * $signed(17'sd22531);
         always_ff @(posedge clk) if (f_ce) begin
@@ -296,11 +320,11 @@ generate
             lpb <= lpb + pb[44:16];
             dc  <= dc + ds[28:0];
         end
-        // AC part x 44 per mix count: x 60 matched MAME's AC level (sim 2026-10-15) but clipped the start jingle
-        // on the left (37 samples); x 44 keeps ~1.4x headroom over it
+        // AC part x 36 per mix count: with the loaded AY levels, whole-run RMS = MAME's and the explosion peak
+        // matches (sim 2026-10-17)
         wire signed [22:0] ac = $signed({2'b00, lpb[28:8]}) - $signed({2'b00, dc[28:8]});   // 8 fraction bits
-        wire signed [29:0] am = ac * $signed(5'sd11);                 // |am| < 2^23 (mix <= 2295 x 256 x 11)
-        wire signed [29:0] gs = am >>> 6;                             // signed wire: arithmetic shift; x 11/64 = x 44/256
+        wire signed [29:0] am = ac * $signed(5'sd9);                  // |am| < 2^23 (mix <= 2295 x 256 x 9)
+        wire signed [29:0] gs = am >>> 6;                             // signed wire: arithmetic shift; x 9/64 = x 36/256
         wire signed [24:0] g  = gs[24:0];
         if (si == 0) begin : g_r assign audio_r = sat16(g); end
         else         begin : g_l assign audio_l = sat16(g); end

@@ -60,10 +60,10 @@ module tp84_board
     output logic  [7:0] snd_latch,      // to rtl/sound/tp84_sound.sv
     output logic        snd_irq,        // one clock per SON write
 
-    output chip_pool_pkg::m6809_i_t m6809_0_i,          // shared MC6809Es (rtl/konami82_board.sv): main
-    input  chip_pool_pkg::m6809_o_t m6809_0_o,
-    output chip_pool_pkg::m6809_i_t m6809_1_i,          //                                          sub
-    input  chip_pool_pkg::m6809_o_t m6809_1_o,
+    output chip_pool_pkg::m6809r_i_t m6809_0_i,          // shared MC6809Es (rtl/konami82_board.sv): main
+    input  chip_pool_pkg::m6809r_o_t m6809_0_o,
+    output chip_pool_pkg::m6809r_i_t m6809_1_i,          //                                          sub
+    input  chip_pool_pkg::m6809r_o_t m6809_1_o,
     input  logic [15:0] hs_address,
     input  logic  [7:0] hs_data_in,
     output logic  [7:0] hs_data_out,
@@ -142,10 +142,16 @@ logic [4:0] div = 5'd0;
 always_ff @(posedge clk) div <= div + 5'd1;
 
 assign ce_pix = (div[2:0] == 3'd7);
-wire   fall_q = (div == 5'd23) & ~pause;      // Q falls a quarter cycle before E
-wire   fall_e = (div == 5'd31) & ~pause;
-wire   sfall_q = (div == 5'd7)  & ~pause;     // sub CPU: E / Q inverted (schematic), shared RAM in its own E-high half
-wire   sfall_e = (div == 5'd15) & ~pause;
+// The hiscore system borrows a CPU RAM port while the CPU is paused; pause_x holds the CPU two clocks longer so
+// its first read after a pause sees its own address again.
+logic [1:0] pause_d = 2'b00;
+always_ff @(posedge clk) pause_d <= {pause_d[0], pause};
+wire pause_x = pause | (|pause_d);
+
+wire   fall_q = (div == 5'd23) & ~pause_x;    // Q falls a quarter cycle before E
+wire   fall_e = (div == 5'd31) & ~pause_x;
+wire   sfall_q = (div == 5'd7)  & ~pause_x;   // sub CPU: E / Q inverted (schematic), shared RAM in its own E-high half
+wire   sfall_e = (div == 5'd15) & ~pause_x;
 
 /////////////////////////////  Video timing  /////////////////////////////
 
@@ -171,6 +177,22 @@ wire [9:0] vs_dist = (v_line >= vs_beg) ? {1'b0, v_line - vs_beg} : {1'b0, v_lin
 
 wire raw_hblank = ~hcnt[8];
 wire raw_vblank = (vcnt < 9'd272) || (vcnt >= 9'd496);
+
+// Watchdog (LS293 14H): counts frames at vblank end (frozen while paused). It clears only when the main CPU writes
+// 2000-27FF (tp84b 1800) after the sub CPU has written 0000-1FFF (LS74 14J): both CPUs must run. QD (8 frames without
+// a kick) holds both CPUs and the main latch in reset for 8 frames, then the count wraps (schematic; MAME models the
+// main CPU only). Video timing keeps running.
+logic       wd_vb = 1'b0, wd_arm = 1'b0, wd_main, wd_sub;
+logic [3:0] wd_cnt = 4'd0;
+always_ff @(posedge clk) begin
+    if (ce_pix) wd_vb <= raw_vblank;
+    if (reset || (wd_main && wd_arm))                  wd_cnt <= 4'd0;
+    else if (ce_pix && !raw_vblank && wd_vb && !pause) wd_cnt <= wd_cnt + 4'd1;
+    if (reset || wd_main)                              wd_arm <= 1'b0;
+    else if (wd_sub)                                   wd_arm <= 1'b1;
+end
+wire wd_rst  = wd_cnt[3];
+wire cpu_rst = reset | wd_rst;
 wire raw_hs     = ~((hcnt >= hs_on) && (hcnt < hs_on + 9'd32));
 wire raw_vs     = (vs_dist >= 10'd3);
 
@@ -188,6 +210,7 @@ logic  [7:0] cpu_do, cpu_di;
 logic        cpu_rw;
 logic        irq_ff = 1'b0;
 
+assign m6809_0_i.reset_n = ~wd_rst;
 assign m6809_0_i.fall_e = fall_e;
 assign m6809_0_i.fall_q = fall_q;
 assign m6809_0_i.irq_n  = ~irq_ff;
@@ -236,21 +259,23 @@ dpram_dc #(.widthad_a(11)) ram_col
     .clock_b(clk), .address_b(tile_ram_a), .q_b(col_d)
 );
 
-// Shared RAM: main CPU on port A, sub CPU on port B
+// Shared RAM: main CPU on port A (the hiscore system's while paused), sub CPU on port B
 logic [15:0] sub_a;
 logic  [7:0] sub_do;
 logic        sub_rw;
 logic  [7:0] shr_cpu_d, shr_sub_d;
 wire         sub_wr  = sfall_e & ~sub_rw;
 wire         scs_shr = sub_a[15:11] == 5'b1000_0;                                            // 8000-87FF
+wire         hs_shr  = b84 ? hs_address[15:11] == 5'b0001_0 : hs_address[15:11] == 5'b0101_0; // 1000 / 5000
 
 dpram_dc #(.widthad_a(11)) ram_shr
 (
-    .clock_a(clk), .address_a(cpu_a[10:0]), .data_a(cpu_do), .wren_a(cs_shr & wr), .q_a(shr_cpu_d),
+    .clock_a(clk), .address_a(pause ? hs_address[10:0] : cpu_a[10:0]), .data_a(pause ? hs_data_in : cpu_do),
+    .wren_a(pause ? hs_shr & hs_write : cs_shr & wr), .q_a(shr_cpu_d),
     .clock_b(clk), .address_b(sub_a[10:0]), .data_b(sub_do), .wren_b(scs_shr & sub_wr), .q_b(shr_sub_d)
 );
 
-assign hs_data_out = 8'h00;                  // hiscore: added in the final pass
+assign hs_data_out = shr_cpu_d;
 
 always_comb begin
     if      (cs_rom)  cpu_di = cpu_rom_d;
@@ -272,7 +297,7 @@ logic       son = 1'b0;
 
 always_ff @(posedge clk) begin
     son <= 1'b0;
-    if (reset) begin
+    if (cpu_rst) begin
         mainlatch <= 8'h00;
         pal_bank  <= 5'd0;
     end else if (wr) begin
@@ -287,7 +312,7 @@ end
 
 // IRQ on vblank start while enabled; held until the enable is cleared
 always_ff @(posedge clk) begin
-    if (reset || !mainlatch[0]) irq_ff <= 1'b0;
+    if (cpu_rst || !mainlatch[0]) irq_ff <= 1'b0;
     else if (vblank_start)      irq_ff <= 1'b1;
 end
 
@@ -296,6 +321,7 @@ end
 logic [7:0] sub_di;
 logic       sirq_ff = 1'b0, sirq_en = 1'b0;
 
+assign m6809_1_i.reset_n = ~wd_rst;
 assign m6809_1_i.fall_e = sfall_e;
 assign m6809_1_i.fall_q = sfall_q;
 assign m6809_1_i.irq_n  = ~sirq_ff;
@@ -330,10 +356,13 @@ always_comb begin
     else               sub_di = 8'hFF;
 end
 
+assign wd_main = wr && (b84 ? cpu_a[15:9] == 7'h0C : cpu_a[15:11] == 5'b0010_0);     // 1800 / 2000-27FF
+assign wd_sub  = sub_wr && sub_a[15:13] == 3'b000;                                          // 0000-1FFF
+
 always_ff @(posedge clk) begin
-    if (reset)                      sirq_en <= 1'b0;
+    if (cpu_rst)                    sirq_en <= 1'b0;
     else if (scs_irq & sub_wr)      sirq_en <= sub_do[0];
-    if (reset || !sirq_en)          sirq_ff <= 1'b0;
+    if (cpu_rst || !sirq_en)        sirq_ff <= 1'b0;
     else if (vblank_start)          sirq_ff <= 1'b1;
 end
 

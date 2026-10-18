@@ -22,8 +22,8 @@
     <flip>yes</flip>
 
     <players>2 (alternating)</players>
-    <joystick>2-way</joystick>
-    <special_controls>twin stick</special_controls>
+    <joystick>4-way</joystick>
+    <special_controls>twin stick (2-way fire stick)</special_controls>
     <num_buttons>3</num_buttons>
     <buttons names="Fire Right,Fire Left,Flash Bomb,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
 

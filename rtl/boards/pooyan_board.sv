@@ -53,12 +53,13 @@ module pooyan_board
     output logic        video_hblank,
     output logic        video_vblank,
 
+    output logic        wd_reset,       // watchdog reset to the sound board (conn 21)
     output logic  [7:0] snd_latch,      // to the shared sound board (rtl/konami82_board.sv)
     output logic        snd_irq,
     output logic        snd_mute,
 
-    output chip_pool_pkg::z80_i_t   z80_0_i,          // shared Z80 (rtl/konami82_board.sv)
-    input  chip_pool_pkg::z80_o_t   z80_0_o,
+    output chip_pool_pkg::z80r_i_t   z80_0_i,          // shared Z80 (rtl/konami82_board.sv)
+    input  chip_pool_pkg::z80r_o_t   z80_0_o,
     input  logic [15:0] hs_address,
     input  logic  [7:0] hs_data_in,
     output logic  [7:0] hs_data_out,
@@ -144,6 +145,18 @@ wire [9:0] vs_dist = (v_line >= vs_beg) ? {1'b0, v_line - vs_beg} : {1'b0, v_lin
 
 wire raw_hblank = ~hcnt[8];
 wire raw_vblank = (vcnt < 9'd272) || (vcnt >= 9'd496);
+
+// Watchdog (LS293 F2): counts frames at vblank start (frozen while paused), cleared by an A000 write (A8-A7 = 00). QD (8 frames without
+// a kick) holds the Z80 and LS259 B2 (and the sound board) in reset for 8 frames, then the count wraps (schematic). Video timing keeps running.
+logic       wd_vb = 1'b0, wd_kick;
+logic [3:0] wd_cnt = 4'd0;
+always_ff @(posedge clk) begin
+    if (ce_pix) wd_vb <= raw_vblank;
+    if (reset || wd_kick)                      wd_cnt <= 4'd0;
+    else if (ce_pix && raw_vblank && !wd_vb && !pause)  wd_cnt <= wd_cnt + 4'd1;
+end
+wire wd_rst  = wd_cnt[3];
+wire cpu_rst = reset | wd_rst;
 wire raw_hs     = ~((hcnt >= hs_on) && (hcnt < hs_on + 9'd32));
 wire raw_vs     = (vs_dist >= 10'd3);
 
@@ -159,6 +172,7 @@ logic        cpu_mreq_n, cpu_rd_n, cpu_wr_n, cpu_rfsh_n;
 logic        nmi_ff = 1'b0;
 
 // Main CPU: the shared T80 in rtl/konami82_board.sv
+assign z80_0_i.reset_n = ~wd_rst;
 assign z80_0_i.ce    = cpu_ce;
 assign z80_0_i.int_n = 1'b1;
 assign z80_0_i.nmi_n = ~nmi_ff;
@@ -253,8 +267,11 @@ end
 
 logic [7:0] sound_latch = 8'h00;
 
+assign wd_kick  = cs_io && wr_edge && cpu_a[8:7] == 2'b00;
+assign wd_reset = wd_rst;
+
 always_ff @(posedge clk) begin
-    if (reset) begin
+    if (cpu_rst) begin
         mainlatch <= 8'h00;
     end else if (cs_io && wr_edge) begin
         if (cpu_a[8:7] == 2'b10) sound_latch <= cpu_do;
@@ -265,7 +282,7 @@ end
 // NMI on vblank start (line 240) while enabled; clearing the enable releases it
 wire vblank_start = ce_pix && hcnt == 9'd128 && vcnt == 9'd496;
 always_ff @(posedge clk) begin
-    if (reset || !mainlatch[0]) nmi_ff <= 1'b0;
+    if (cpu_rst || !mainlatch[0]) nmi_ff <= 1'b0;
     else if (vblank_start)      nmi_ff <= 1'b1;
 end
 

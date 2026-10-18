@@ -61,12 +61,13 @@ module timeplt_board
     output logic        video_hblank,
     output logic        video_vblank,
 
+    output logic        wd_reset,       // watchdog reset to the sound board (conn 21)
     output logic  [7:0] snd_latch,      // to the shared sound board (rtl/konami82_board.sv)
     output logic        snd_irq,
     output logic        snd_mute,
 
-    output chip_pool_pkg::z80_i_t   z80_0_i,          // shared Z80 (rtl/konami82_board.sv)
-    input  chip_pool_pkg::z80_o_t   z80_0_o,
+    output chip_pool_pkg::z80r_i_t   z80_0_i,          // shared Z80 (rtl/konami82_board.sv)
+    input  chip_pool_pkg::z80r_o_t   z80_0_o,
     input  logic [15:0] hs_address,
     input  logic  [7:0] hs_data_in,
     output logic  [7:0] hs_data_out,
@@ -126,7 +127,13 @@ logic [3:0] div = 4'd0;
 always_ff @(posedge clk) div <= div + 4'd1;
 
 assign ce_pix = (div[2:0] == 3'd7);
-wire   cpu_ce = (div == 4'd15) & ~pause;
+// The hiscore system borrows a CPU RAM port while the CPU is paused; pause_x holds the CPU two clocks longer so
+// its first read after a pause sees its own address again.
+logic [1:0] pause_d = 2'b00;
+always_ff @(posedge clk) pause_d <= {pause_d[0], pause};
+wire pause_x = pause | (|pause_d);
+
+wire   cpu_ce = (div == 4'd15) & ~pause_x;
 
 /////////////////////////////  Video timing (082)  /////////////////////////////
 
@@ -152,6 +159,18 @@ wire [9:0] vs_dist = (v_line >= vs_beg) ? {1'b0, v_line - vs_beg} : {1'b0, v_lin
 
 wire raw_hblank = ~hcnt[8];
 wire raw_vblank = (vcnt < 9'd272) || (vcnt >= 9'd496);
+
+// Watchdog (LS293 G12): counts frames at vblank start (frozen while paused), cleared by a C200 write (C000-CFFF, A9-A8 = 10). QD (8 frames without
+// a kick) holds the Z80 and LS259 B3 (and the sound board) in reset for 8 frames, then the count wraps (schematic). Video timing keeps running.
+logic       wd_vb = 1'b0, wd_kick;
+logic [3:0] wd_cnt = 4'd0;
+always_ff @(posedge clk) begin
+    if (ce_pix) wd_vb <= raw_vblank;
+    if (reset || wd_kick)                      wd_cnt <= 4'd0;
+    else if (ce_pix && raw_vblank && !wd_vb && !pause)  wd_cnt <= wd_cnt + 4'd1;
+end
+wire wd_rst  = wd_cnt[3];
+wire cpu_rst = reset | wd_rst;
 wire raw_hs     = ~((hcnt >= hs_on) && (hcnt < hs_on + 9'd32));
 wire raw_vs     = (vs_dist >= 10'd3);
 
@@ -171,6 +190,7 @@ logic        cpu_mreq_n, cpu_rd_n, cpu_wr_n, cpu_rfsh_n;
 logic        nmi_ff = 1'b0;
 
 // Main CPU: the shared T80 in rtl/konami82_board.sv
+assign z80_0_i.reset_n = ~wd_rst;
 assign z80_0_i.ce    = cpu_ce;
 assign z80_0_i.int_n = 1'b1;
 assign z80_0_i.nmi_n = ~nmi_ff;
@@ -216,12 +236,13 @@ dpram_dc #(.widthad_a(10)) ram_vid
 );
 
 // Work RAM (2128); second port for the hiscore system
-logic [7:0] ram_cpu_d;
-wire        hs_cs = hs_address[15:11] == 5'b1010_1;
+logic [7:0] ram_cpu_d, hs_work_d;
+wire        hs_cs  = hs_address[15:11] == 5'b1010_1;
+wire        hs_spr = hs_address[15:12] == 4'hB && !hs_address[10];       // sprite bank 1 (Power Surge's table)
 dpram_dc #(.widthad_a(11)) ram_work
 (
     .clock_a(clk), .address_a(cpu_a[10:0]), .data_a(cpu_do), .wren_a(cs_ram & wr_strobe), .q_a(ram_cpu_d),
-    .clock_b(clk), .address_b(hs_address[10:0]), .data_b(hs_data_in), .wren_b(hs_cs & hs_write), .q_b(hs_data_out)
+    .clock_b(clk), .address_b(hs_address[10:0]), .data_b(hs_data_in), .wren_b(hs_cs & hs_write), .q_b(hs_work_d)
 );
 
 logic [7:0] xram_d;
@@ -230,15 +251,19 @@ spram #(.ADDR_WIDTH(11)) ram_x
     .clk(clk), .addr(cpu_a[10:0]), .data(cpu_do), .we(cs_xram & wr_strobe), .q(xram_d)
 );
 
-// Sprite RAM: bank 1 (B000, A10=0) = X / code, bank 2 (B400, A10=1) = attribute / Y
+// Sprite RAM: bank 1 (B000, A10=0) = X / code, bank 2 (B400, A10=1) = attribute / Y. Bank 1 port A is the hiscore
+// system's while paused.
 logic [7:0] spr_ram_a;
 logic [7:0] spr1_cpu_d, spr2_cpu_d, spr1_d, spr2_d;
 
 dpram_dc #(.widthad_a(8)) ram_spr1
 (
-    .clock_a(clk), .address_a(cpu_a[7:0]), .data_a(cpu_do), .wren_a(cs_spr & ~cpu_a[10] & wr_strobe), .q_a(spr1_cpu_d),
+    .clock_a(clk), .address_a(pause ? hs_address[7:0] : cpu_a[7:0]), .data_a(pause ? hs_data_in : cpu_do),
+    .wren_a(pause ? hs_spr & hs_write : cs_spr & ~cpu_a[10] & wr_strobe), .q_a(spr1_cpu_d),
     .clock_b(clk), .address_b(spr_ram_a), .q_b(spr1_d)
 );
+
+assign hs_data_out = hs_spr ? spr1_cpu_d : hs_work_d;
 
 dpram_dc #(.widthad_a(8)) ram_spr2
 (
@@ -276,8 +301,11 @@ end
 
 logic [7:0] sound_latch = 8'h00;
 
+assign wd_kick  = cs_io && wr_edge && cpu_a[9:8] == 2'b10;
+assign wd_reset = wd_rst;
+
 always_ff @(posedge clk) begin
-    if (reset) begin
+    if (cpu_rst) begin
         mainlatch <= 8'h00;
     end else if (cs_io && wr_edge) begin
         if (cpu_a[9:8] == 2'b00) sound_latch <= cpu_do;
@@ -290,7 +318,7 @@ end
 wire vblank_start = ce_pix && hcnt == 9'd128 && vcnt == 9'd496;
 wire vblank_end   = ce_pix && hcnt == 9'd128 && vcnt == 9'd272;
 always_ff @(posedge clk) begin
-    if (reset)                     nmi_ff <= 1'b0;
+    if (cpu_rst)                   nmi_ff <= 1'b0;
     else if (is_ps) begin
         if (vblank_start)          nmi_ff <= 1'b1;
         else if (vblank_end)       nmi_ff <= 1'b0;

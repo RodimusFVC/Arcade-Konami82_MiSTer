@@ -22,8 +22,8 @@ module tp84_sound
     input  logic  [7:0] latch,          // main CPU sound data (3A00)
     input  logic        irq_trig,       // main CPU SON (3800): interrupts the Z80
 
-    output chip_pool_pkg::z80_i_t   z80_1_i,                 // shared sound Z80 (rtl/konami82_board.sv)
-    input  chip_pool_pkg::z80_o_t   z80_1_o,
+    output chip_pool_pkg::z80r_i_t   z80_1_i,                 // shared sound Z80 (rtl/konami82_board.sv)
+    input  chip_pool_pkg::z80r_o_t   z80_1_o,
     output chip_pool_pkg::sn76489_i_t [2:0] sn76489_i,       // shared SN76489As (rtl/konami82_board.sv)
     input  chip_pool_pkg::sn76489_o_t [2:0] sn76489_o,
     output logic signed [15:0] audio
@@ -56,6 +56,7 @@ logic        m1_n, mreq_n, iorq_n, rd_n, wr_n, rfsh_n;
 logic        irq_ff = 1'b0;
 
 // Sound CPU: the shared T80 in rtl/konami82_board.sv
+assign z80_1_i.reset_n = ~reset;              // core reset, or the board watchdog (rtl/konami82_board.sv)
 assign z80_1_i.ce    = cpu_ce;
 assign z80_1_i.int_n = ~irq_ff;
 assign z80_1_i.nmi_n = 1'b1;

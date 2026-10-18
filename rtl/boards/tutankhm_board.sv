@@ -58,12 +58,13 @@ module tutankhm_board
     output logic        video_hblank,
     output logic        video_vblank,
 
+    output logic        wd_reset,       // watchdog reset to the sound board (conn 21)
     output logic  [7:0] snd_latch,      // to the shared sound board (rtl/konami82_board.sv)
     output logic        snd_irq,        // Tutankham: trigger pulse; Juno First: 8040 bit 0 level
     output logic        snd_mute,
 
-    output chip_pool_pkg::m6809_i_t m6809_0_i,          // shared MC6809E (rtl/konami82_board.sv)
-    input  chip_pool_pkg::m6809_o_t m6809_0_o,
+    output chip_pool_pkg::m6809r_i_t m6809_0_i,          // shared MC6809E (rtl/konami82_board.sv)
+    input  chip_pool_pkg::m6809r_o_t m6809_0_o,
     input  logic [15:0] hs_address,
     input  logic  [7:0] hs_data_in,
     output logic  [7:0] hs_data_out,
@@ -140,6 +141,21 @@ wire [9:0] vs_dist = (v_line >= vs_beg) ? {1'b0, v_line - vs_beg} : {1'b0, v_lin
 
 wire raw_hblank = ~hcnt[8];
 wire raw_vblank = (vcnt < 9'd272) || (vcnt >= 9'd496);
+
+// Watchdog, frozen while paused, cleared by a kick; it holds the CPU and the main latch (and the sound board) in reset.
+// Juno First: LS293 H9 counts frames at vblank end, kick = any access to 801C-801F; QD (8 frames) -> reset for 8 frames,
+// then the count wraps (schematic). Tutankham: inside the 084 (F3), kick = any access to 8120-812F; its timeout is not
+// on the schematic, so 64 frames (MAME: 3 s) with the same 8-frame reset (#unverified). Video timing keeps running.
+logic       wd_vb = 1'b0, wd_kick;
+logic [6:0] wd_cnt = 7'd0;
+wire        wd_edge = juno ? !raw_vblank && wd_vb : raw_vblank && !wd_vb;
+always_ff @(posedge clk) begin
+    if (ce_pix) wd_vb <= raw_vblank;
+    if (reset || wd_kick)                    wd_cnt <= 7'd0;
+    else if (ce_pix && wd_edge && !pause)    wd_cnt <= (wd_cnt == (juno ? 7'd15 : 7'd71)) ? 7'd0 : wd_cnt + 7'd1;
+end
+wire wd_rst  = juno ? wd_cnt[3] : wd_cnt[6];
+wire cpu_rst = reset | wd_rst;
 wire raw_hs     = ~((hcnt >= hs_on) && (hcnt < hs_on + 9'd32));
 wire raw_vs     = (vs_dist >= 10'd3);
 
@@ -156,6 +172,7 @@ logic        cpu_rw, cpu_lic;
 logic        irq_ff = 1'b0;
 
 // Main CPU: the shared MC6809E in rtl/konami82_board.sv
+assign m6809_0_i.reset_n = ~wd_rst;
 assign m6809_0_i.fall_e = fall_e;
 assign m6809_0_i.fall_q = fall_q;
 assign m6809_0_i.irq_n  = ~irq_ff;
@@ -185,7 +202,7 @@ endfunction
 assign cpu_di = op_fetch ? bus_d ^ k1_key(cpu_a) : bus_d;
 
 always_ff @(posedge clk) begin
-    if (reset) begin
+    if (cpu_rst) begin
         lic_q <= 1'b0;
         pfx_q <= 1'b0;
     end else if (fall_e) begin
@@ -226,6 +243,9 @@ wire cs_slat = juno ? jf_slat : tk_slat;
 wire cs_blit = juno & jf_blit;
 wire cs_ram  = juno ? jf_ram  : tk_ram;
 wire cs_brom = cpu_a[15:12] == 4'h9;                                // 9000-9FFF banked ROM
+
+assign wd_kick  = fall_e && (juno ? cpu_a[15:2] == 14'h2007 : cpu_a[15:4] == 12'h812);
+assign wd_reset = wd_rst;
 wire cs_rom  = cpu_a >= 16'hA000;
 
 // one write per bus cycle, at the end of E
@@ -301,7 +321,7 @@ logic       blt_go;
 always_ff @(posedge clk) begin
     if (snd_pulse != 6'd0) snd_pulse <= snd_pulse - 6'd1;
     blt_go <= 1'b0;
-    if (reset) begin
+    if (cpu_rst) begin
         mainlatch <= 8'h00;
         bank      <= 4'd0;
         snd_pulse <= 6'd0;
@@ -342,7 +362,7 @@ wire [3:0] blt_out = blt_copy ? blt_nib : 4'd0;
 
 always_ff @(posedge clk) begin
     blt_we <= 1'b0;
-    if (reset)
+    if (cpu_rst)
         blt_st <= 2'd0;
     else case (blt_st)
         2'd0: if (blt_go) begin
@@ -378,7 +398,7 @@ end
 logic irq_toggle = 1'b0;
 wire  vblank_start = ce_pix && hcnt == 9'd128 && vcnt == 9'd496;
 always_ff @(posedge clk) begin
-    if (reset) begin
+    if (cpu_rst) begin
         irq_toggle <= 1'b0;
         irq_ff     <= 1'b0;
     end else begin

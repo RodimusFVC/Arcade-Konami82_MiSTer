@@ -65,6 +65,17 @@
         </part>
     </rom>
 
+    <!-- Index 3: hiscore config (MAME hiscore.dat), index 4: saved scores -->
+    <rom index="3" md5="none">
+        <part>
+            01 BD 80 00 00 FF 00 02 00 02 00 01 11 11 00 00
+            00 00 AB 08 00 28 00 F1
+            00 00 A9 8B 00 03 00 01
+        </part>
+    </rom>
+    <rom index="4"></rom>
+    <nvram index="4" size="43"></nvram>
+
     <remark>Time Pilot (Konami)</remark>
     <mratimestamp>20261015000000</mratimestamp>
 </misterromdescription>

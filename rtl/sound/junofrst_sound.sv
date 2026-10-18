@@ -29,8 +29,8 @@ module junofrst_sound
     input  logic        irq_trig,       // main CPU 8040 D0: rising edge interrupts the Z80
     input  logic        mute,           // main latch Q3 MUT -> LA4460 pin 6 DC mute (schematic p14 / p18)
 
-    output chip_pool_pkg::z80_i_t   z80_1_i,           // shared sound Z80 (rtl/konami82_board.sv)
-    input  chip_pool_pkg::z80_o_t   z80_1_o,
+    output chip_pool_pkg::z80r_i_t   z80_1_i,           // shared sound Z80 (rtl/konami82_board.sv)
+    input  chip_pool_pkg::z80r_o_t   z80_1_o,
     output chip_pool_pkg::ay_i_t  [0:0] ay_i,      // shared AYs (rtl/konami82_board.sv)
     input  chip_pool_pkg::ay_o_t  [0:0] ay_o,
     output chip_pool_pkg::mcs48_i_t mcs48_0_i,          // shared 8039 (rtl/konami82_board.sv)
@@ -77,6 +77,7 @@ logic        m1_n, mreq_n, iorq_n, rd_n, wr_n, rfsh_n;
 logic        irq_ff = 1'b0;
 
 // Sound CPU: the shared T80 in rtl/konami82_board.sv
+assign z80_1_i.reset_n = ~reset;              // core reset, or the board watchdog (rtl/konami82_board.sv)
 assign z80_1_i.ce    = cpu_ce;
 assign z80_1_i.int_n = ~irq_ff;
 assign z80_1_i.nmi_n = 1'b1;

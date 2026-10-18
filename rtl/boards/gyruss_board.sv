@@ -58,13 +58,14 @@ module gyruss_board
     output logic        video_hblank,
     output logic        video_vblank,
 
+    output logic        wd_reset,       // watchdog reset to the sound board (conn 21)
     output logic  [7:0] snd_latch,      // to rtl/sound/gyruss_sound.sv
     output logic        snd_irq,
 
-    output chip_pool_pkg::z80_i_t   z80_0_i,          // shared Z80 (rtl/konami82_board.sv)
-    input  chip_pool_pkg::z80_o_t   z80_0_o,
-    output chip_pool_pkg::m6809_i_t m6809_0_i,          // shared MC6809E (rtl/konami82_board.sv)
-    input  chip_pool_pkg::m6809_o_t m6809_0_o,
+    output chip_pool_pkg::z80r_i_t   z80_0_i,          // shared Z80 (rtl/konami82_board.sv)
+    input  chip_pool_pkg::z80r_o_t   z80_0_o,
+    output chip_pool_pkg::m6809r_i_t m6809_0_i,          // shared MC6809E (rtl/konami82_board.sv)
+    input  chip_pool_pkg::m6809r_o_t m6809_0_o,
     input  logic [15:0] hs_address,
     input  logic  [7:0] hs_data_in,
     output logic  [7:0] hs_data_out,
@@ -130,6 +131,19 @@ wire [7:0] vs_dist = vcnt - vs_beg;
 
 wire raw_hblank = ~hcnt[8];
 wire raw_vblank = (vcnt < 8'd16) || (vcnt >= 8'd240);
+
+// Watchdog (LS293 17J; MAME has none): counts frames at vblank end (frozen while paused), cleared by a main CPU C000
+// write. QD (8 frames without a kick) holds the Z80, the KONAMI-1 sub, its IRQ mask and LS259 3C (and the sound
+// board) in reset for 8 frames, then the count wraps (schematic). Video timing keeps running.
+logic       wd_vb = 1'b0, wd_kick;
+logic [3:0] wd_cnt = 4'd0;
+always_ff @(posedge clk) begin
+    if (ce_pix) wd_vb <= raw_vblank;
+    if (reset || wd_kick)                              wd_cnt <= 4'd0;
+    else if (ce_pix && !raw_vblank && wd_vb && !pause) wd_cnt <= wd_cnt + 4'd1;
+end
+wire wd_rst  = wd_cnt[3];
+wire cpu_rst = reset | wd_rst;
 wire raw_hs     = ~((hcnt >= hs_on) && (hcnt < hs_on + 9'd32));
 wire raw_vs     = (vs_dist >= 8'd3);
 
@@ -145,6 +159,7 @@ logic        cpu_mreq_n, cpu_rd_n, cpu_wr_n, cpu_rfsh_n;
 logic        nmi_ff = 1'b0;
 
 // Main CPU: the shared T80 in rtl/konami82_board.sv
+assign z80_0_i.reset_n = ~wd_rst;
 assign z80_0_i.ce    = cpu_ce;
 assign z80_0_i.int_n = 1'b1;
 assign z80_0_i.nmi_n = ~nmi_ff;
@@ -238,9 +253,12 @@ end
 logic [7:0] sound_latch = 8'h00;
 logic [5:0] snd_pulse = 6'd0;
 
+assign wd_kick  = cs_io && wr_edge && cpu_a[8:7] == 2'b00;
+assign wd_reset = wd_rst;
+
 always_ff @(posedge clk) begin
     if (snd_pulse != 6'd0) snd_pulse <= snd_pulse - 6'd1;
-    if (reset) begin
+    if (cpu_rst) begin
         mainlatch <= 8'h00;
         snd_pulse <= 6'd0;
     end else if (cs_io && wr_edge) begin
@@ -253,7 +271,7 @@ end
 // NMI at vblank start (line 240) while enabled; clearing the enable releases it
 wire vblank_start = ce_pix && hcnt == 9'd116 && vcnt == 8'd240;
 always_ff @(posedge clk) begin
-    if (reset)                     nmi_ff <= 1'b0;
+    if (cpu_rst)                   nmi_ff <= 1'b0;
     else if (!mainlatch[0])        nmi_ff <= 1'b0;
     else if (vblank_start)         nmi_ff <= 1'b1;
 end
@@ -265,6 +283,7 @@ logic        sub_lic;
 logic        sub_irq = 1'b0, sub_irq_en = 1'b0;
 
 // Sub CPU (KONAMI-1): the shared MC6809E in rtl/konami82_board.sv
+assign m6809_0_i.reset_n = ~wd_rst;
 assign m6809_0_i.fall_e = fall_e;
 assign m6809_0_i.fall_q = fall_q;
 assign m6809_0_i.irq_n  = ~sub_irq;
@@ -293,7 +312,7 @@ endfunction
 assign sub_di = op_fetch ? sub_bus ^ k1_key(sub_a) : sub_bus;
 
 always_ff @(posedge clk) begin
-    if (reset) begin
+    if (cpu_rst) begin
         lic_q <= 1'b0;
         pfx_q <= 1'b0;
     end else if (fall_e) begin
@@ -328,7 +347,7 @@ end
 
 // IRQ at vblank start while enabled (2000 D0), held until the enable is cleared
 always_ff @(posedge clk) begin
-    if (reset) begin
+    if (cpu_rst) begin
         sub_irq_en <= 1'b0;
         sub_irq    <= 1'b0;
     end else begin

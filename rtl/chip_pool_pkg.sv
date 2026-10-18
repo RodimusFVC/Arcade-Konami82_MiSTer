@@ -47,6 +47,44 @@ typedef struct packed {
     logic        lic;
 } m6809_o_t;
 
+// Z80 (T80s, as z80_i_t) with RESET_n on the bus: Konami82's board watchdogs reset the main and sound CPUs
+typedef struct packed {
+    logic        reset_n;
+    logic        ce;
+    logic        int_n;
+    logic        nmi_n;
+    logic  [7:0] di;
+} z80r_i_t;
+
+typedef struct packed {
+    logic [15:0] a;
+    logic  [7:0] dout;
+    logic        m1_n;
+    logic        mreq_n;
+    logic        iorq_n;
+    logic        rd_n;
+    logic        wr_n;
+    logic        rfsh_n;
+} z80r_o_t;
+
+// MC6809E (mc6809is, as m6809_i_t) with RESET on the bus: Konami82's board watchdogs
+typedef struct packed {
+    logic        reset_n;
+    logic        fall_e;
+    logic        fall_q;
+    logic        irq_n;
+    logic        firq_n;
+    logic        nmi_n;
+    logic  [7:0] d;
+} m6809r_i_t;
+
+typedef struct packed {
+    logic [15:0] a;
+    logic  [7:0] dout;
+    logic        rw;
+    logic        lic;
+} m6809r_o_t;
+
 // AY-3-8910 (jt49_bus, sel = 1)
 typedef struct packed {
     logic        ce;

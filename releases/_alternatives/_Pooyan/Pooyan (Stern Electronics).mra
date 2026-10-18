@@ -67,6 +67,19 @@
         </part>
     </rom>
 
+    <!-- Index 3: hiscore config (MAME hiscore.dat), index 4: saved scores -->
+    <rom index="3" md5="none">
+        <part>
+            03 3D 20 00 00 FF 00 02 00 02 00 01 11 11 00 00
+            00 00 89 C0 00 1E 00 00
+            00 00 8A 00 00 1E 00 01
+            00 00 8E 00 00 1E 00 00
+            00 00 88 A8 00 03 00 01
+        </part>
+    </rom>
+    <rom index="4"></rom>
+    <nvram index="4" size="93"></nvram>
+
     <remark>Pooyan (Stern Electronics) (Konami (Stern Electronics License))</remark>
     <mratimestamp>20261015000000</mratimestamp>
 </misterromdescription>

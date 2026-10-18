@@ -14,7 +14,8 @@
 //  Variant 10/11: Time Pilot '84 board (MAME tp84.cpp: tp84, tp84a / tp84b), own sound board
 //  All but Juno First use the Time Pilot sound board, instanced once here. Its ROM sits at ioctl 0x08000 on every
 //  board: the variant byte arrives in index 1, after the ROMs, so loading must not depend on it.
-//  The board not selected is held in reset.
+//  The board not selected is held in reset. A board's watchdog resets its own CPUs (pool reset_n) and, where the
+//  schematic routes it there (conn 21), the sound board.
 //  ROMs: the three main index-0 windows are one shared RAM each (below); every board reads its ROMs from them,
 //  the active board's address selected by variant. Board-only images (PROMs, Juno First blitter/sound ROMs)
 //  stay in their boards. Port A loads the block during download and is a second read port otherwise (Gyruss).
@@ -91,6 +92,7 @@ logic        gy_ce, gy_hs, gy_vs, gy_hb, gy_vb, gy_irq;
 logic  [7:0] gy_r, gy_g, gy_b, gy_latch, gy_hs_d;
 logic  [7:0] tp_latch, po_latch, rr_latch, tk_latch, tp_hs_d, po_hs_d, rr_hs_d, tk_hs_d;
 logic        tp_irq, tp_mute, po_irq, po_mute, rr_irq, rr_mute, tk_irq, tk_mute;
+logic        tp_wdr, po_wdr, rr_wdr, tk_wdr, gy_wdr;              // board watchdog resets to the sound boards
 logic [14:0] tp_r0a, po_r0a, rr_r0a, tk_r0a;
 logic [13:0] tp_r1a, po_r1a, rr_r1a, tk_r1a;
 logic [15:0] tp_r2a, po_r2a, rr_r2a, tk_r2a;
@@ -113,8 +115,8 @@ logic [15:0] t8_r2a, t8_r2b_a;
 /////////////////////////////  Shared CPU / sound chip pool  /////////////////////////////
 
 // Main Z80: Time Pilot board, Pooyan, Gyruss main
-chip_pool_pkg::z80_i_t tp_z80_0_i, po_z80_0_i, gy_z80_0_i, z80_0_i;
-chip_pool_pkg::z80_o_t z80_0_o;
+chip_pool_pkg::z80r_i_t tp_z80_0_i, po_z80_0_i, gy_z80_0_i, z80_0_i;
+chip_pool_pkg::z80r_o_t z80_0_o;
 assign z80_0_i = is_gy ? gy_z80_0_i : is_po ? po_z80_0_i : tp_z80_0_i;
 
 wire [15:0] z80_0_a;
@@ -123,7 +125,7 @@ wire        z80_0_m1_n, z80_0_mreq_n, z80_0_iorq_n, z80_0_rd_n, z80_0_wr_n, z80_
 
 T80s #(.Mode(0), .T2Write(1), .IOWait(1)) z80_0
 (
-    .RESET_n(~reset), .CLK(clk), .CEN(z80_0_i.ce), .WAIT_n(1'b1), .INT_n(z80_0_i.int_n), .NMI_n(z80_0_i.nmi_n), .BUSRQ_n(1'b1),
+    .RESET_n(~reset & z80_0_i.reset_n), .CLK(clk), .CEN(z80_0_i.ce), .WAIT_n(1'b1), .INT_n(z80_0_i.int_n), .NMI_n(z80_0_i.nmi_n), .BUSRQ_n(1'b1),
     .M1_n(z80_0_m1_n), .MREQ_n(z80_0_mreq_n), .IORQ_n(z80_0_iorq_n), .RD_n(z80_0_rd_n), .WR_n(z80_0_wr_n), .RFSH_n(z80_0_rfsh_n),
     .HALT_n(), .BUSAK_n(), .A(z80_0_a), .DI(z80_0_i.di), .DO(z80_0_do)
 );
@@ -133,8 +135,8 @@ assign z80_0_o.m1_n = z80_0_m1_n;     assign z80_0_o.mreq_n = z80_0_mreq_n; assi
 assign z80_0_o.rd_n = z80_0_rd_n;     assign z80_0_o.wr_n = z80_0_wr_n;     assign z80_0_o.rfsh_n = z80_0_rfsh_n;
 
 // Sound Z80: Time Pilot sound board, Juno First, Gyruss, Circus Charlie, Time Pilot '84
-chip_pool_pkg::z80_i_t tp_z80_1_i, jf_z80_1_i, gy_z80_1_i, cc_z80_1_i, t8_z80_1_i, z80_1_i;
-chip_pool_pkg::z80_o_t z80_1_o;
+chip_pool_pkg::z80r_i_t tp_z80_1_i, jf_z80_1_i, gy_z80_1_i, cc_z80_1_i, t8_z80_1_i, z80_1_i;
+chip_pool_pkg::z80r_o_t z80_1_o;
 assign z80_1_i = is_t8 ? t8_z80_1_i : is_cc ? cc_z80_1_i : is_gy ? gy_z80_1_i : is_jf ? jf_z80_1_i : tp_z80_1_i;
 
 wire [15:0] z80_1_a;
@@ -143,7 +145,7 @@ wire        z80_1_m1_n, z80_1_mreq_n, z80_1_iorq_n, z80_1_rd_n, z80_1_wr_n, z80_
 
 T80s #(.Mode(0), .T2Write(1), .IOWait(1)) z80_1
 (
-    .RESET_n(~reset), .CLK(clk), .CEN(z80_1_i.ce), .WAIT_n(1'b1), .INT_n(z80_1_i.int_n), .NMI_n(z80_1_i.nmi_n), .BUSRQ_n(1'b1),
+    .RESET_n(~reset & z80_1_i.reset_n), .CLK(clk), .CEN(z80_1_i.ce), .WAIT_n(1'b1), .INT_n(z80_1_i.int_n), .NMI_n(z80_1_i.nmi_n), .BUSRQ_n(1'b1),
     .M1_n(z80_1_m1_n), .MREQ_n(z80_1_mreq_n), .IORQ_n(z80_1_iorq_n), .RD_n(z80_1_rd_n), .WR_n(z80_1_wr_n), .RFSH_n(z80_1_rfsh_n),
     .HALT_n(), .BUSAK_n(), .A(z80_1_a), .DI(z80_1_i.di), .DO(z80_1_do)
 );
@@ -153,8 +155,8 @@ assign z80_1_o.m1_n = z80_1_m1_n;     assign z80_1_o.mreq_n = z80_1_mreq_n; assi
 assign z80_1_o.rd_n = z80_1_rd_n;     assign z80_1_o.wr_n = z80_1_wr_n;     assign z80_1_o.rfsh_n = z80_1_rfsh_n;
 
 // MC6809E: Roc'n Rope, Tutankham / Juno First, Gyruss sub, Circus Charlie, Time Pilot '84 main (Greg Miller's mc6809is, unmodified)
-chip_pool_pkg::m6809_i_t rr_m6809_0_i, tk_m6809_0_i, gy_m6809_0_i, cc_m6809_0_i, t8_m6809_0_i, m6809_0_i;
-chip_pool_pkg::m6809_o_t m6809_0_o;
+chip_pool_pkg::m6809r_i_t rr_m6809_0_i, tk_m6809_0_i, gy_m6809_0_i, cc_m6809_0_i, t8_m6809_0_i, m6809_0_i;
+chip_pool_pkg::m6809r_o_t m6809_0_o;
 assign m6809_0_i = is_t8 ? t8_m6809_0_i : is_cc ? cc_m6809_0_i : is_gy ? gy_m6809_0_i : is_tk ? tk_m6809_0_i : rr_m6809_0_i;
 
 wire [15:0] m6809_0_a;
@@ -165,14 +167,14 @@ mc6809is m6809_0
 (
     .CLK(clk), .fallE_en(m6809_0_i.fall_e), .fallQ_en(m6809_0_i.fall_q), .D(m6809_0_i.d), .DOut(m6809_0_do), .ADDR(m6809_0_a),
     .RnW(m6809_0_rw), .BS(), .BA(), .nIRQ(m6809_0_i.irq_n), .nFIRQ(m6809_0_i.firq_n), .nNMI(m6809_0_i.nmi_n), .AVMA(), .BUSY(),
-    .LIC(m6809_0_lic), .nHALT(1'b1), .nRESET(~reset), .nDMABREQ(1'b1), .RegData()
+    .LIC(m6809_0_lic), .nHALT(1'b1), .nRESET(~reset & m6809_0_i.reset_n), .nDMABREQ(1'b1), .RegData()
 );
 
 assign m6809_0_o.a = m6809_0_a;  assign m6809_0_o.dout = m6809_0_do;  assign m6809_0_o.rw = m6809_0_rw;  assign m6809_0_o.lic = m6809_0_lic;
 
 // Second MC6809E: Time Pilot '84 sub
-chip_pool_pkg::m6809_i_t t8_m6809_1_i, m6809_1_i;
-chip_pool_pkg::m6809_o_t m6809_1_o;
+chip_pool_pkg::m6809r_i_t t8_m6809_1_i, m6809_1_i;
+chip_pool_pkg::m6809r_o_t m6809_1_o;
 assign m6809_1_i = t8_m6809_1_i;
 
 wire [15:0] m6809_1_a;
@@ -183,7 +185,7 @@ mc6809is m6809_1
 (
     .CLK(clk), .fallE_en(m6809_1_i.fall_e), .fallQ_en(m6809_1_i.fall_q), .D(m6809_1_i.d), .DOut(m6809_1_do), .ADDR(m6809_1_a),
     .RnW(m6809_1_rw), .BS(), .BA(), .nIRQ(m6809_1_i.irq_n), .nFIRQ(m6809_1_i.firq_n), .nNMI(m6809_1_i.nmi_n), .AVMA(), .BUSY(),
-    .LIC(m6809_1_lic), .nHALT(1'b1), .nRESET(~reset), .nDMABREQ(1'b1), .RegData()
+    .LIC(m6809_1_lic), .nHALT(1'b1), .nRESET(~reset & m6809_1_i.reset_n), .nDMABREQ(1'b1), .RegData()
 );
 
 assign m6809_1_o.a = m6809_1_a;  assign m6809_1_o.dout = m6809_1_do;  assign m6809_1_o.rw = m6809_1_rw;  assign m6809_1_o.lic = m6809_1_lic;
@@ -319,6 +321,7 @@ timeplt_board timeplt
     .video_hblank(tp_hb),
     .video_vblank(tp_vb),
 
+    .wd_reset(tp_wdr),
     .snd_latch(tp_latch),
     .snd_irq(tp_irq),
     .snd_mute(tp_mute),
@@ -367,6 +370,7 @@ pooyan_board pooyan
     .video_hblank(po_hb),
     .video_vblank(po_vb),
 
+    .wd_reset(po_wdr),
     .snd_latch(po_latch),
     .snd_irq(po_irq),
     .snd_mute(po_mute),
@@ -417,6 +421,7 @@ rocnrope_board rocnrope
     .video_hblank(rr_hb),
     .video_vblank(rr_vb),
 
+    .wd_reset(rr_wdr),
     .snd_latch(rr_latch),
     .snd_irq(rr_irq),
     .snd_mute(rr_mute),
@@ -466,6 +471,7 @@ tutankhm_board tutankhm
     .video_hblank(tk_hb),
     .video_vblank(tk_vb),
 
+    .wd_reset(tk_wdr),
     .snd_latch(tk_latch),
     .snd_irq(tk_irq),
     .snd_mute(tk_mute),
@@ -527,6 +533,7 @@ gyruss_board gyruss
     .video_hblank(gy_hb),
     .video_vblank(gy_vb),
 
+    .wd_reset(gy_wdr),
     .snd_latch(gy_latch),
     .snd_irq(gy_irq),
 
@@ -553,7 +560,7 @@ logic signed [15:0] tp_audio, jf_audio;
 timeplt_sound sound
 (
     .clk(clk),
-    .reset(reset | is_jf | is_gy | is_cc | is_t8),
+    .reset(reset | is_jf | is_gy | is_cc | is_t8 | tp_wdr | po_wdr | rr_wdr | tk_wdr),
     .pause(pause),
     .ioctl_addr(ioctl_addr),
     .ioctl_dout(ioctl_dout),
@@ -578,7 +585,7 @@ timeplt_sound sound
 junofrst_sound jf_sound
 (
     .clk(clk),
-    .reset(reset | ~is_jf),
+    .reset(reset | ~is_jf | tk_wdr),
     .pause(pause),
     .ioctl_addr(ioctl_addr),
     .ioctl_dout(ioctl_dout),
@@ -602,7 +609,7 @@ logic signed [15:0] gy_audio_l, gy_audio_r;
 gyruss_sound gy_sound
 (
     .clk(clk),
-    .reset(reset | ~is_gy),
+    .reset(reset | ~is_gy | gy_wdr),
     .pause(pause),
     .z80_rom_a(gy_r2b_a),
     .z80_rom_d(rom2b_d),

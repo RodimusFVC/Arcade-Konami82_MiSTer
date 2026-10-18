@@ -25,7 +25,12 @@ HISCORE_DAT = Path("/CybertronMD/Mame/plugins/hiscore/hiscore.dat")   # current 
 HISCORE_HEADER_TAIL = "00 FF 00 02 00 02 00 01 11 11 00 00"
 # START_WAIT = last boot-time write to the hiscore.dat ranges, measured in MAME (write taps, 30 s, bytes rewritten
 # every frame excluded), + 2 frames. Keyed by a reference set per distinct hiscore.dat layout.
-HISCORE_INIT_FRAME = {}   # none measured yet: hiscores are added in one final pass
+# MAME frame at which every hiscore.dat range first holds its default start / end bytes (after the RAM test),
+# measured 2026-10-17 with a per-frame sentinel log; START_WAIT = that + 2 frames. Keyed by one set per layout.
+# rocnrope: 368 = the core's own table init (MAME 365). Its end bytes are 00 like cleared RAM, so a check before the
+# init has finished matches part-way through it and the game then overwrites the restore (sim, hiscore.v).
+HISCORE_INIT_FRAME = {"timeplt": 34, "psurge": 64, "pooyan": 65, "rocnrope": 368, "tutankhm": 61, "junofrst": 29,
+                      "gyruss": 5, "venus": 5, "circusc": 316, "tp84": 245, "tp84b": 202}
 CLK_HZ, FRAME_HZ = 49_152_000, 6_144_000 / (384 * 264)
 
 # region -> (base in ioctl index 0, size taken); same bases on the Time Pilot and Pooyan boards
@@ -577,7 +582,9 @@ def mra(g, games, segs, build_inputs):
     variant = STATE_VARIANT.get(g["state"], SUPPORTED[(g["machine"], g["init"])])
     ports = PORT_REWRITE.get(g["machine"], lambda p: p)(build_inputs(g["inputs"]))
     idle, dips, imap, fourway, buttons, tb_rev, impulse = input_config(g, ports)
-    twoway = any(f.get("twoway") for fields in ports.values() for f in fields)
+    twoway = any(f.get("twoway") and not f.get("type", "").startswith("JOYSTICKRIGHT")    # Tutankham: 2-way fire stick
+                 for fields in ports.values() for f in fields)
+    fire2way = any(f.get("twoway") and f.get("type", "").startswith("JOYSTICKRIGHT") for fields in ports.values() for f in fields)
     flags = (F_4WAY if fourway else 0) | (F_IMPULSE if impulse else 0) | (F_WIDE if g["init"] in WIDE_INITS or g["machine"] in WIDE_MACHINES else 0) | \
             (F_VERT if g["rot"] in ("ROT90", "ROT270") else 0) | \
             (F_ROT90 if g["rot"] == "ROT90" else 0)
@@ -656,7 +663,7 @@ def mra(g, games, segs, build_inputs):
 
     <players>2 (alternating)</players>
     <joystick>{"2-way" if twoway else "4-way" if fourway else "8-way"}</joystick>
-    <special_controls>{"trackball" if any(24 <= i < 32 for i in imap) else "twin stick" if twin else ""}</special_controls>
+    <special_controls>{"trackball" if any(24 <= i < 32 for i in imap) else ("twin stick (2-way fire stick)" if fire2way else "twin stick") if twin else ""}</special_controls>
     <num_buttons>{nbtn}</num_buttons>
     <buttons names="{names}" default="A,B,X,Y,Select,Start,R,L"/>
 

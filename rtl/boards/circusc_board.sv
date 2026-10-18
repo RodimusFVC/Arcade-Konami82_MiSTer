@@ -57,8 +57,8 @@ module circusc_board
     output logic  [7:0] snd_latch,      // to rtl/sound/circusc_sound.sv
     output logic        snd_irq,        // one clock per SOUND-ON write
 
-    output chip_pool_pkg::m6809_i_t m6809_0_i,          // shared MC6809E (rtl/konami82_board.sv)
-    input  chip_pool_pkg::m6809_o_t m6809_0_o,
+    output chip_pool_pkg::m6809r_i_t m6809_0_i,          // shared MC6809E (rtl/konami82_board.sv)
+    input  chip_pool_pkg::m6809r_o_t m6809_0_o,
     input  logic [15:0] hs_address,
     input  logic  [7:0] hs_data_in,
     output logic  [7:0] hs_data_out,
@@ -127,8 +127,14 @@ logic [4:0] div = 5'd0;
 always_ff @(posedge clk) div <= div + 5'd1;
 
 assign ce_pix = (div[2:0] == 3'd7);
-wire   fall_q = (div == 5'd23) & ~pause;      // Q falls a quarter cycle before E
-wire   fall_e = (div == 5'd31) & ~pause;
+// The hiscore system borrows a CPU RAM port while the CPU is paused; pause_x holds the CPU two clocks longer so
+// its first read after a pause sees its own address again.
+logic [1:0] pause_d = 2'b00;
+always_ff @(posedge clk) pause_d <= {pause_d[0], pause};
+wire pause_x = pause | (|pause_d);
+
+wire   fall_q = (div == 5'd23) & ~pause_x;    // Q falls a quarter cycle before E
+wire   fall_e = (div == 5'd31) & ~pause_x;
 
 /////////////////////////////  Video timing  /////////////////////////////
 
@@ -154,6 +160,18 @@ wire [9:0] vs_dist = (v_line >= vs_beg) ? {1'b0, v_line - vs_beg} : {1'b0, v_lin
 
 wire raw_hblank = ~hcnt[8];
 wire raw_vblank = (vcnt < 9'd272) || (vcnt >= 9'd496);
+
+// Watchdog (LS293 12G): counts frames at vblank start (frozen while paused), cleared by a WDOG write (0400-07FF). QD (8 frames without
+// a kick) holds the KONAMI-1 and LS259 2C in reset for 8 frames, then the count wraps (schematic). Video timing keeps running.
+logic       wd_vb = 1'b0, wd_kick;
+logic [3:0] wd_cnt = 4'd0;
+always_ff @(posedge clk) begin
+    if (ce_pix) wd_vb <= raw_vblank;
+    if (reset || wd_kick)                      wd_cnt <= 4'd0;
+    else if (ce_pix && raw_vblank && !wd_vb && !pause)  wd_cnt <= wd_cnt + 4'd1;
+end
+wire wd_rst  = wd_cnt[3];
+wire cpu_rst = reset | wd_rst;
 wire raw_hs     = ~((hcnt >= hs_on) && (hcnt < hs_on + 9'd32));
 wire raw_vs     = (vs_dist >= 10'd3);
 
@@ -171,6 +189,7 @@ logic        cpu_rw, cpu_lic;
 logic        irq_ff = 1'b0;
 
 // Main CPU (KONAMI-1): the shared MC6809E in rtl/konami82_board.sv
+assign m6809_0_i.reset_n = ~wd_rst;
 assign m6809_0_i.fall_e = fall_e;
 assign m6809_0_i.fall_q = fall_q;
 assign m6809_0_i.irq_n  = ~irq_ff;
@@ -199,7 +218,7 @@ endfunction
 assign cpu_di = op_fetch ? bus_d ^ k1_key(cpu_a) : bus_d;
 
 always_ff @(posedge clk) begin
-    if (reset) begin
+    if (cpu_rst) begin
         lic_q <= 1'b0;
         pfx_q <= 1'b0;
     end else if (fall_e) begin
@@ -220,15 +239,18 @@ wire cs_col   = cpu_a[15:10] == 6'b0011_00;                         // 3000-33FF
 wire cs_vid   = cpu_a[15:10] == 6'b0011_01;                         // 3400-37FF
 wire cs_obj   = cpu_a[15:11] == 5'b0011_1;                          // 3800-3BFF, mirrored at 3C00-3FFF
 wire cs_rom   = cpu_a >= 16'h6000;
+wire cs_wdog  = cpu_a[15:10] == 6'b0000_01;                         // 0400-07FF WDOG
 
 assign cpu_rom_a = cpu_a;
 
 // one write per bus cycle, at the end of E
 wire wr = fall_e & ~cpu_rw;
 
-// Colour / video RAM: CPU on port A, tile fetch on port B
+// Colour / video RAM: CPU on port A, tile fetch on port B. Video RAM port A is the hiscore system's while paused
+// (the shown hiscore digits).
 logic [9:0] tile_ram_a;
-logic [7:0] col_cpu_d, vid_cpu_d, col_d, vid_d;
+logic [7:0] col_cpu_d, vid_cpu_d, col_d, vid_d, hs_work_d;
+wire        hs_vid = hs_address[15:10] == 6'b0011_01;
 
 dpram_dc #(.widthad_a(10)) ram_col
 (
@@ -238,7 +260,8 @@ dpram_dc #(.widthad_a(10)) ram_col
 
 dpram_dc #(.widthad_a(10)) ram_vid
 (
-    .clock_a(clk), .address_a(cpu_a[9:0]), .data_a(cpu_do), .wren_a(cs_vid & wr), .q_a(vid_cpu_d),
+    .clock_a(clk), .address_a(pause ? hs_address[9:0] : cpu_a[9:0]), .data_a(pause ? hs_data_in : cpu_do),
+    .wren_a(pause ? hs_vid & hs_write : cs_vid & wr), .q_a(vid_cpu_d),
     .clock_b(clk), .address_b(tile_ram_a), .q_b(vid_d)
 );
 
@@ -258,8 +281,10 @@ wire        hs_cs = hs_address[15:12] == 4'h2;
 dpram_dc #(.widthad_a(12)) ram_work
 (
     .clock_a(clk), .address_a(cpu_a[11:0]), .data_a(cpu_do), .wren_a(cs_ram & wr), .q_a(ram_cpu_d),
-    .clock_b(clk), .address_b(hs_address[11:0]), .data_b(hs_data_in), .wren_b(hs_cs & hs_write), .q_b(hs_data_out)
+    .clock_b(clk), .address_b(hs_address[11:0]), .data_b(hs_data_in), .wren_b(hs_cs & hs_write), .q_b(hs_work_d)
 );
+
+assign hs_data_out = hs_vid ? vid_cpu_d : hs_work_d;
 
 always_comb begin
     if      (cs_rom)  bus_d = cpu_rom_d;
@@ -279,12 +304,14 @@ always_comb begin
 end
 
 logic [7:0] sound_latch = 8'h00;
+
+assign wd_kick = cs_wdog & wr;
 logic [7:0] scroll = 8'h00;
 logic       son = 1'b0;
 
 always_ff @(posedge clk) begin
     son <= 1'b0;
-    if (reset) begin
+    if (cpu_rst) begin
         mainlatch <= 8'h00;
     end else if (wr) begin
         if (cs_latch) mainlatch[cpu_a[2:0]] <= cpu_do[0];
@@ -296,7 +323,7 @@ end
 
 // IRQ on vblank start while enabled; held until the enable is cleared
 always_ff @(posedge clk) begin
-    if (reset || !mainlatch[1]) irq_ff <= 1'b0;
+    if (cpu_rst || !mainlatch[1]) irq_ff <= 1'b0;
     else if (vblank_start)      irq_ff <= 1'b1;
 end
 

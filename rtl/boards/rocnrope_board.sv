@@ -59,12 +59,13 @@ module rocnrope_board
     output logic        video_hblank,
     output logic        video_vblank,
 
+    output logic        wd_reset,       // watchdog reset to the sound board (conn 21)
     output logic  [7:0] snd_latch,      // to the shared sound board (rtl/konami82_board.sv)
     output logic        snd_irq,
     output logic        snd_mute,
 
-    output chip_pool_pkg::m6809_i_t m6809_0_i,          // shared MC6809E (rtl/konami82_board.sv)
-    input  chip_pool_pkg::m6809_o_t m6809_0_o,
+    output chip_pool_pkg::m6809r_i_t m6809_0_i,          // shared MC6809E (rtl/konami82_board.sv)
+    input  chip_pool_pkg::m6809r_o_t m6809_0_o,
     input  logic [15:0] hs_address,
     input  logic  [7:0] hs_data_in,
     output logic  [7:0] hs_data_out,
@@ -151,6 +152,18 @@ wire [9:0] vs_dist = (v_line >= vs_beg) ? {1'b0, v_line - vs_beg} : {1'b0, v_lin
 
 wire raw_hblank = ~hcnt[8];
 wire raw_vblank = (vcnt < 9'd272) || (vcnt >= 9'd496);
+
+// Watchdog (LS293 E2): counts frames at vblank start (frozen while paused), cleared by an 8000 write (8000-807F). QD (8 frames without
+// a kick) holds the KONAMI-1 and LS259 B2 (and the sound board) in reset for 8 frames, then the count wraps (schematic). Video timing keeps running.
+logic       wd_vb = 1'b0, wd_kick;
+logic [3:0] wd_cnt = 4'd0;
+always_ff @(posedge clk) begin
+    if (ce_pix) wd_vb <= raw_vblank;
+    if (reset || wd_kick)                      wd_cnt <= 4'd0;
+    else if (ce_pix && raw_vblank && !wd_vb && !pause)  wd_cnt <= wd_cnt + 4'd1;
+end
+wire wd_rst  = wd_cnt[3];
+wire cpu_rst = reset | wd_rst;
 wire raw_hs     = ~((hcnt >= hs_on) && (hcnt < hs_on + 9'd32));
 wire raw_vs     = (vs_dist >= 10'd3);
 
@@ -166,6 +179,7 @@ logic        cpu_rw, cpu_lic;
 logic        irq_ff = 1'b0;
 
 // Main CPU (KONAMI-1): the shared MC6809E in rtl/konami82_board.sv
+assign m6809_0_i.reset_n = ~wd_rst;
 assign m6809_0_i.fall_e = fall_e;
 assign m6809_0_i.fall_q = fall_q;
 assign m6809_0_i.irq_n  = ~irq_ff;
@@ -194,7 +208,7 @@ endfunction
 assign cpu_di = op_fetch ? bus_d ^ k1_key(cpu_a) : bus_d;
 
 always_ff @(posedge clk) begin
-    if (reset) begin
+    if (cpu_rst) begin
         lic_q <= 1'b0;
         pfx_q <= 1'b0;
     end else if (fall_e) begin
@@ -292,10 +306,13 @@ always_comb begin
 end
 
 logic [7:0] sound_latch = 8'h00;
+
+assign wd_kick  = cs_ctl && wr && cpu_a[11:7] == 5'd0;
+assign wd_reset = wd_rst;
 wire  [7:0] vec_wa = cpu_a[7:0] - 8'h82;
 
 always_ff @(posedge clk) begin
-    if (reset) begin
+    if (cpu_rst) begin
         mainlatch <= 8'h00;
     end else if (cs_ctl && wr) begin
         if (cpu_a[11:0] >= 12'h080 && cpu_a[11:0] <= 12'h087) mainlatch[cpu_a[2:0]] <= cpu_do[0];
@@ -307,7 +324,7 @@ end
 // IRQ on vblank start while enabled; held until the enable is cleared
 wire vblank_start = ce_pix && hcnt == 9'd128 && vcnt == 9'd496;
 always_ff @(posedge clk) begin
-    if (reset || !mainlatch[7]) irq_ff <= 1'b0;
+    if (cpu_rst || !mainlatch[7]) irq_ff <= 1'b0;
     else if (vblank_start)      irq_ff <= 1'b1;
 end
 
