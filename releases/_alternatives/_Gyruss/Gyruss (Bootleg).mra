@@ -38,35 +38,36 @@
         <dip name="Demo Music" bits="16" ids="Off,On" values="1,0"/>
     </switches>
 
-    <!-- Index 0: MAME regions, layout in rtl/boards/gyruss_board.sv -->
+    <!-- Index 0: 8K ROM banks (rtl/konami82_board.sv), PROMs at their window address in rtl/boards/gyruss_board.sv -->
     <rom index="0" md5="none" zip="gyrussb.zip|gyruss.zip">
-        <part crc="6bc21c10" name="1.bin"/>
-        <part crc="a4ec03e4" name="2.bin"/>
-        <part crc="27454a98" name="3.bin"/>
-        <part crc="822bf27e" name="9.bin"/>
-        <part repeat="0x4000">00</part>
-        <part crc="27d8329b" name="4.bin"/>
-        <part crc="3f9b5dea" name="13.bin"/>
-        <part repeat="0x1000">00</part>
         <part crc="c949db10" name="6.bin"/>
         <part crc="4f22411a" name="5.bin"/>
         <part crc="47cd1fbc" name="8.bin"/>
         <part crc="8e8d388c" name="7.bin"/>
+        <part crc="6bc21c10" name="1.bin"/>
+        <part crc="a4ec03e4" name="2.bin"/>
+        <part crc="27454a98" name="3.bin"/>
         <part crc="f4ae1c17" name="11.bin"/>
         <part crc="ba498115" name="12.bin"/>
-        <part repeat="0x4000">00</part>
+        <part crc="27d8329b" name="4.bin"/>
+        <part crc="822bf27e" name="9.bin"/>
+        <part crc="3f9b5dea" name="13.bin"/>
+        <part repeat="0x1000">00</part>
+        <part repeat="0x8000">00</part>
         <part crc="98782db3" name="gyrussk.pr3"/>
         <part crc="7ed057de" name="gyrussk.pr1"/>
         <part crc="de823a81" name="gyrussk.pr2"/>
     </rom>
 
-    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <!-- Index 1: board variant, flags, input map, ROM bank map (see Arcade-Konami82.sv) -->
     <rom index="1">
         <part>
             08 90 00 00 FF FF FF FF 3B FE 80 80 80 00 01 02
             11 12 16 13 14 00 00 00 03 04 01 02 05 00 00 00
             0B 0C 09 0A 0D 00 00 00 00 00 00 00 00 00 00 00
             00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            04 09 00 00 00 00 00 00 07 0A 03 00 00 00 00 00
+            F2 F2 F2 F2 F0 F0 F0 AF AF F1 8F 9F FF FF FF FF
         </part>
     </rom>
 

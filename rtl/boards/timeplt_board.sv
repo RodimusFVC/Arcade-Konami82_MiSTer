@@ -14,7 +14,8 @@
 //      tile priority = attr 7, sprite planes swapped, 128 sprites, coin hopper on latch Q5 / IN1 bit 1
 //    3 Chance Kun (chkun_state): as Bikkuri Card with 256 sprites
 //
-//  ioctl index 0 (MRA), images stored as dumped, MAME region order:
+//  ROM windows (banked ROM store, rtl/konami82_board.sv; PROMs load from index 0 at their window address),
+//  images stored as dumped, MAME region order:
 //    0x00000 - 0x07FFF  maincpu
 //    0x08000 - 0x0BFFF  timeplt_audio:tpsound
 //    0x0C000 - 0x0FFFF  tiles
@@ -42,7 +43,7 @@ module timeplt_board
     input  logic  [7:0] ioctl_dout,
     input  logic        ioctl_wr0,
 
-    output logic [14:0] rom0_a,         // shared ROM blocks (rtl/konami82_board.sv): ioctl 0x00000-0x07FFF
+    output logic [14:0] rom0_a,         // banked ROM store (rtl/konami82_board.sv): window 0x00000-0x07FFF
     input  logic  [7:0] rom0_d,
     output logic [13:0] rom1_a,         //                                            0x0C000-0x0FFFF
     input  logic  [7:0] rom1_d,
@@ -84,17 +85,17 @@ wire load_lut  = load_prom && ioctl_addr[9:0] >= 10'h040 && ioctl_addr[9:0] < 10
 
 logic [14:0] cpu_rom_a;
 logic  [7:0] cpu_rom_d;
-assign rom0_a    = cpu_rom_a;                // CPU ROM in shared block 0
+assign rom0_a    = cpu_rom_a;                // CPU ROM in ROM window 0
 assign cpu_rom_d = rom0_d;
 
 logic [13:0] tile_rom_a;
 logic  [7:0] tile_rom_d;
-assign rom1_a     = tile_rom_a;              // tiles in shared block 1
+assign rom1_a     = tile_rom_a;              // tiles in ROM window 1
 assign tile_rom_d = rom1_d;
 
 logic [13:0] spr_rom_a;
 logic  [7:0] spr_rom_d;
-assign rom2_a    = {2'b00, spr_rom_a};       // sprites in shared block 2
+assign rom2_a    = {2'b00, spr_rom_a};       // sprites in ROM window 2
 assign spr_rom_d = rom2_d;
 
 // Lookup PROMs: 0x000-0x0FF sprites (E9), 0x100-0x1FF chars (E12); low nibble used

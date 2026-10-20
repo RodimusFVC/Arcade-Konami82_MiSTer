@@ -16,6 +16,10 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/junofrst_sound.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/gyruss_sound.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/circusc_sound.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/tp84_sound.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/art/artwork.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/art/art_resample.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/art/png_decode.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/art/inflate.sv
 
 set_global_assignment -name QIP_FILE rtl/cpu/T80/T80.qip
 set_global_assignment -name QIP_FILE rtl/cpu/i8039/i8039.qip

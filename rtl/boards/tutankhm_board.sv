@@ -12,12 +12,12 @@
 //  by address bits 3 and 1, decrypted outside the unmodified MC6809), its own I/O map, no scroll or stars,
 //  12 code/graphics banks, and a 16x16 nibble blitter at 8070-8073. Its sound board is junofrst_sound.sv.
 //
-//  ioctl index 0 (MRA), images stored as dumped:
+//  ROM windows (banked ROM store, rtl/konami82_board.sv), images stored as dumped:
 //    0x00000 - 0x05FFF  maincpu A000-FFFF
 //    0x08000 - 0x0BFFF  timeplt_audio:tpsound (shared sound board, same window on every board)
 //    0x10000 - 0x1BFFF  maincpu banks 0-11 (9000-9FFF window; Tutankham 0-8, Juno First 0-11)
 //    0x20000 - 0x21FFF  Juno First audiocpu + mcu (junofrst_sound.sv)
-//    0x24000 - 0x29FFF  Juno First blitrom
+//    0x24000 - 0x29FFF  Juno First blitrom (blt_rom)
 //
 //============================================================================
 
@@ -35,16 +35,14 @@ module tutankhm_board
     input  logic  [7:0] dsw0,           // $81E0 DSW1 coinage (Juno First $802C)
     input  logic  [7:0] dsw1,           // $8160 DSW2        (Juno First $8010)
 
-    input  logic [24:0] ioctl_addr,
-    input  logic  [7:0] ioctl_dout,
-    input  logic        ioctl_wr0,
-
-    output logic [14:0] rom0_a,         // shared ROM blocks (rtl/konami82_board.sv): ioctl 0x00000-0x07FFF
+    output logic [14:0] rom0_a,         // banked ROM store (rtl/konami82_board.sv): window 0x00000-0x07FFF
     input  logic  [7:0] rom0_d,
-    output logic [13:0] rom1_a,         //                                            0x0C000-0x0FFFF
+    output logic [13:0] rom1_a,         //                                                  0x0C000-0x0FFFF
     input  logic  [7:0] rom1_d,
-    output logic [15:0] rom2_a,         //                                            0x10000-0x1FFFF
+    output logic [15:0] rom2_a,         //                                                  0x10000-0x1FFFF
     input  logic  [7:0] rom2_d,
+    output logic [14:0] blt_rom_a,      //                                                  0x24000-0x2BFFF (blitter)
+    input  logic  [7:0] blt_rom_d,
 
     input  logic        crt_flip,
     input  logic  [3:0] h_adj,          // HSYNC moved 2 pixels per step (signed)
@@ -73,33 +71,19 @@ module tutankhm_board
 
 /////////////////////////////  ROM storage  /////////////////////////////
 
-wire load_blt0  = ioctl_wr0 && ioctl_addr[24:14] == 11'h009;   // 0x24000-0x27FFF  blitrom 0000-3FFF
-wire load_blt1  = ioctl_wr0 && ioctl_addr[24:13] == 12'h014;   // 0x28000-0x29FFF  blitrom 4000-5FFF
-
 logic [15:0] cpu_a;
 logic  [3:0] bank;
 wire  [15:0] romh_a = cpu_a - 16'hA000;
 
-// A000-FFFF in shared block 0 (A000-DFFF at 0x0000, E000-FFFF at 0x4000), banks in shared block 2
+// A000-FFFF in ROM window 0 (A000-DFFF at 0x0000, E000-FFFF at 0x4000), banks in ROM window 2
 // (0-7 at 0x0000, 8-11 at 0x8000). One CPU reads them, one cycle at a time.
 assign rom0_a = (cpu_a[15:13] == 3'b111) ? {2'b10, cpu_a[12:0]} : {1'b0, romh_a[13:0]};
 assign rom1_a = 14'd0;
 assign rom2_a = ~bank[3] ? {1'b0, bank[2:0], cpu_a[11:0]} : {2'b10, bank[1:0], cpu_a[11:0]};
 
-// Juno First blitter source ROM (BLTROM, 24K): read only by the blitter
+// Juno First blitter source ROM (BLTROM, 24K, window 0x24000): read only by the blitter
 logic [14:0] blt_ra;
-logic  [7:0] blt0_d, blt1_d;
-dpram_dc #(.widthad_a(14)) rom_blt0
-(
-    .clock_a(clk), .address_a(ioctl_addr[13:0]), .data_a(ioctl_dout), .wren_a(load_blt0),
-    .clock_b(clk), .address_b(blt_ra[13:0]), .q_b(blt0_d)
-);
-
-dpram_dc #(.widthad_a(13)) rom_blt1
-(
-    .clock_a(clk), .address_a(ioctl_addr[12:0]), .data_a(ioctl_dout), .wren_a(load_blt1),
-    .clock_b(clk), .address_b(blt_ra[12:0]), .q_b(blt1_d)
-);
+assign blt_rom_a = blt_ra;
 
 /////////////////////////////  Clocks  /////////////////////////////
 
@@ -356,7 +340,7 @@ logic        blt_oob;
 
 assign blt_busy = blt_st != 2'd0 || blt_go || blt_we;           // the last write lands after the FSM ends
 
-wire [7:0] blt_rom = blt_oob ? 8'h00 : (blt_ra[14] ? blt1_d : blt0_d);
+wire [7:0] blt_rom = blt_oob ? 8'h00 : blt_rom_d;
 wire [3:0] blt_nib = blt_srcodd ? blt_rom[3:0] : blt_rom[7:4];
 wire [3:0] blt_out = blt_copy ? blt_nib : 4'd0;
 

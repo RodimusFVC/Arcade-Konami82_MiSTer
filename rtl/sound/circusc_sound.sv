@@ -7,7 +7,7 @@
 //  Z80 (14.31818 / 4), two SN76489A (14.31818 / 8) written from a data latch, an 8-bit R-2R DAC, and three
 //  switchable RC filters (one per source) into an op-amp mixer.
 //
-//  Z80 ROM 0000-3FFF in shared block 2, second port (ioctl 0x10000, rtl/konami82_board.sv)
+//  Z80 ROM 0000-3FFF in ROM window 2, second port (window 0x10000, rtl/konami82_board.sv)
 //
 //============================================================================
 
@@ -87,7 +87,7 @@ wire cs_lat = mem && a[15:13] == 3'b011;         // 6000 CS0 sound data
 wire cs_tmr = mem && a[15:13] == 3'b100;         // 8000 CS1 timer
 wire cs_wr  = mem && a[15:13] == 3'b101;         // A000 CS2-CS6 by A2-A0
 
-assign z80_rom_a = {2'b00, a[13:0]};             // block 2 at 0x0000 (ioctl 0x10000)
+assign z80_rom_a = {2'b00, a[13:0]};             // block 2 at 0x0000 (window 0x10000)
 
 logic [7:0] ram_d;
 spram #(.ADDR_WIDTH(10)) ram

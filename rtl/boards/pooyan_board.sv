@@ -7,7 +7,8 @@
 //  Same timing and sound board as Time Pilot; 4bpp tiles and sprites, one 32x8 palette PROM
 //  and two 256x4 lookup PROMs.
 //
-//  ioctl index 0 (MRA), images stored as dumped, MAME region order:
+//  ROM windows (banked ROM store, rtl/konami82_board.sv; PROMs load from index 0 at their window address),
+//  images stored as dumped, MAME region order:
 //    0x00000 - 0x07FFF  maincpu
 //    0x08000 - 0x0BFFF  timeplt_audio:tpsound (shared sound board)
 //    0x0C000 - 0x0DFFF  tiles   (0x0000 planes 0/1, 0x1000 planes 2/3)
@@ -34,7 +35,7 @@ module pooyan_board
     input  logic  [7:0] ioctl_dout,
     input  logic        ioctl_wr0,
 
-    output logic [14:0] rom0_a,         // shared ROM blocks (rtl/konami82_board.sv): ioctl 0x00000-0x07FFF
+    output logic [14:0] rom0_a,         // banked ROM store (rtl/konami82_board.sv): window 0x00000-0x07FFF
     input  logic  [7:0] rom0_d,
     output logic [13:0] rom1_a,         //                                            0x0C000-0x0FFFF
     input  logic  [7:0] rom1_d,
@@ -77,17 +78,17 @@ wire load_slut = load_prom && ioctl_addr[9:0] >= 10'h120 && ioctl_addr[9:0] < 10
 
 logic [14:0] cpu_rom_a;
 logic  [7:0] cpu_rom_d;
-assign rom0_a    = cpu_rom_a;                // CPU ROM in shared block 0
+assign rom0_a    = cpu_rom_a;                // CPU ROM in ROM window 0
 assign cpu_rom_d = rom0_d;
 
 logic [12:0] tile_rom_a;
 logic  [7:0] tile_rom_d;
-assign rom1_a     = {1'b0, tile_rom_a};      // tiles in shared block 1
+assign rom1_a     = {1'b0, tile_rom_a};      // tiles in ROM window 1
 assign tile_rom_d = rom1_d;
 
 logic [12:0] spr_rom_a;
 logic  [7:0] spr_rom_d;
-assign rom2_a    = {3'b000, spr_rom_a};      // sprites in shared block 2
+assign rom2_a    = {3'b000, spr_rom_a};      // sprites in ROM window 2
 assign spr_rom_d = rom2_d;
 
 logic [7:0] clut_a, clut_d;

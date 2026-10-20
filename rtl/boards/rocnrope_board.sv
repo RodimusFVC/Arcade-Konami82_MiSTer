@@ -8,7 +8,8 @@
 //  address bits 3 and 1. Modelled here as Greg Miller's MC6809 (synchronous version) plus an
 //  external opcode decrypter; the CPU core is used unmodified.
 //
-//  ioctl index 0 (MRA), images stored as dumped, MAME region order:
+//  ROM windows (banked ROM store, rtl/konami82_board.sv; PROMs load from index 0 at their window address),
+//  images stored as dumped, MAME region order:
 //    0x00000 - 0x07FFF  sprites (0x0000 planes 0/1, 0x4000 planes 2/3)
 //    0x08000 - 0x0BFFF  timeplt_audio:tpsound (shared sound board, same window on every board:
 //                       the variant byte arrives in index 1, after the ROMs)
@@ -40,7 +41,7 @@ module rocnrope_board
     input  logic  [7:0] ioctl_dout,
     input  logic        ioctl_wr0,
 
-    output logic [14:0] rom0_a,         // shared ROM blocks (rtl/konami82_board.sv): ioctl 0x00000-0x07FFF
+    output logic [14:0] rom0_a,         // banked ROM store (rtl/konami82_board.sv): window 0x00000-0x07FFF
     input  logic  [7:0] rom0_d,
     output logic [13:0] rom1_a,         //                                            0x0C000-0x0FFFF
     input  logic  [7:0] rom1_d,
@@ -83,17 +84,17 @@ wire load_clut = load_prom && ioctl_addr[9:0] >= 10'h120 && ioctl_addr[9:0] < 10
 
 logic [15:0] cpu_rom_a;
 logic  [7:0] cpu_rom_d;
-assign rom2_a    = cpu_rom_a;                // CPU ROM in shared block 2
+assign rom2_a    = cpu_rom_a;                // CPU ROM in ROM window 2
 assign cpu_rom_d = rom2_d;
 
 logic [14:0] spr_rom_a;
 logic  [7:0] spr_rom_d;
-assign rom0_a    = spr_rom_a;                // sprites in shared block 0
+assign rom0_a    = spr_rom_a;                // sprites in ROM window 0
 assign spr_rom_d = rom0_d;
 
 logic [13:0] tile_rom_a;
 logic  [7:0] tile_rom_d;
-assign rom1_a     = tile_rom_a;              // tiles in shared block 1
+assign rom1_a     = tile_rom_a;              // tiles in ROM window 1
 assign tile_rom_d = rom1_d;
 
 logic [7:0] slut_a, slut_d;

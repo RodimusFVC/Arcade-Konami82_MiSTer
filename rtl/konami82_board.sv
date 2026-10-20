@@ -12,17 +12,16 @@
 //  Variant 2: Roc'n Rope board (MAME rocnrope.cpp: rocnrope, rocnropek, ropeman)
 //  Variant 9: Circus Charlie board (MAME circusc.cpp: circusc, circusc2-4, circuscc, circusce), own sound board
 //  Variant 10/11: Time Pilot '84 board (MAME tp84.cpp: tp84, tp84a / tp84b), own sound board
-//  All but Juno First use the Time Pilot sound board, instanced once here. Its ROM sits at ioctl 0x08000 on every
-//  board: the variant byte arrives in index 1, after the ROMs, so loading must not depend on it.
+//  All but Juno First use the Time Pilot sound board, instanced once here.
 //  The board not selected is held in reset. A board's watchdog resets its own CPUs (pool reset_n) and, where the
 //  schematic routes it there (conn 21), the sound board.
-//  ROMs: the three main index-0 windows are one shared RAM each (below); every board reads its ROMs from them,
-//  the active board's address selected by variant. Board-only images (PROMs, Juno First blitter/sound ROMs)
-//  stay in their boards. Port A loads the block during download and is a second read port otherwise (Gyruss).
+//  ROMs: one banked store (below) holds every ROM image; each board reads it through the same window addresses
+//  its header lists (rom0-rom3 and second ports, sound / blitter / 8039 ROMs), the active board's address
+//  selected by variant. PROMs stay in their boards, loaded from their window address in index 0.
 //  CPUs and sound chips are a pool too (below): z80_0 (main), z80_1 (sound), m6809_0-1, ay[0-4], mcs48_0, sn76489[0-2],
 //  each driven by the active board's bus (rtl/chip_pool_pkg.sv).
 //
-//  ROM layout per board: see the board module header.
+//  ROM window layout per board: see the board module header; tools/gen_mra.py maps the windows onto banks.
 //
 //============================================================================
 
@@ -34,6 +33,7 @@ module konami82_board
     input  logic  [7:0] variant,
     input  logic  [3:0] rom_dec,
     input  logic  [7:0] game_flags2,
+    input  logic [31:0][7:0] rom_map,   // index 1 bytes 64-95: ROM bank map (Banked ROM store, below)
     output logic        ce_pix,
 
     input  logic  [7:0] in0,
@@ -261,29 +261,89 @@ generate
     end
 endgenerate
 
-/////////////////////////////  Shared ROM blocks  /////////////////////////////
+/////////////////////////////  Banked ROM store  /////////////////////////////
 
-wire load_rom0 = ioctl_wr0 && ioctl_addr[24:15] == 10'h000;    // 0x00000-0x07FFF  32K
-wire load_rom1 = ioctl_wr0 && ioctl_addr[24:14] == 11'h003;    // 0x0C000-0x0FFFF  16K
-wire load_rom2 = ioctl_wr0 && ioctl_addr[24:16] == 9'h001;     // 0x10000-0x1FFFF  64K
+// Every ROM image lives in one store of NBANK 8K banks. Loading is linear and variant-free (the variant arrives after
+// the ROMs): index 0 byte n -> bank n[16:13], offset n[12:0]; tools/gen_mra.py copies each set's window pages
+// bank-aligned (PROMs stay at their window address, read by the boards' own loaders).
+// Each ROM reader is a channel issuing the window address it always did. Per set, index 1 (rom_map) gives each
+// channel a base bank (bank = base + address[15:13], mod 16; bytes 0-15) and each bank its owner on either port
+// ({port A, port B} channel, F = none; bytes 16-31). A channel reading a bank it doesn't own gets 0, as an unloaded
+// window byte read before. Same latency as one RAM: the owners' addresses go straight to the banks, and the data
+// comes back through a bank select registered alongside them.
+//   port B: 0 rom0, 1 rom1, 2 rom2, 3 rom3, 4 Time Pilot sound ROM, 5 Juno First blitter ROM
+//   port A: 8 rom0b, 9 rom1b, 10 rom2b, 11 Juno First 8039 ROM (port A also loads, on the write strobe)
+localparam NBANK = 15;
 
-dpram_dc #(.widthad_a(15)) rom0
-(
-    .clock_a(clk), .address_a(load_rom0 ? ioctl_addr[14:0] : is_t8 ? t8_r0b_a : gy_r0b_a), .data_a(ioctl_dout), .wren_a(load_rom0), .q_a(rom0b_d),
-    .clock_b(clk), .address_b(is_t8 ? t8_r0a : is_cc ? cc_r0a : is_gy ? gy_r0a : is_tk ? tk_r0a : is_rr ? rr_r0a : is_po ? po_r0a : tp_r0a), .q_b(rom0_d)
-);
+wire [13:0] cc_r3a;
+wire [12:0] t8_r3a;
+wire [11:0] jf_r3a;
+wire  [7:0] rom3_d;
+logic [12:0] snd_rom_a;
+logic [14:0] blt_rom_a;
+logic [11:0] jf_mcu_a;
+logic  [7:0] snd_rom_d, blt_rom_d, jf_mcu_d;
 
-dpram_dc #(.widthad_a(14)) rom1
-(
-    .clock_a(clk), .address_a(load_rom1 ? ioctl_addr[13:0] : gy_r1b_a), .data_a(ioctl_dout), .wren_a(load_rom1), .q_a(rom1b_d),
-    .clock_b(clk), .address_b(is_t8 ? t8_r1a : is_cc ? cc_r1a : is_gy ? gy_r1a : is_tk ? tk_r1a : is_rr ? rr_r1a : is_po ? po_r1a : tp_r1a), .q_b(rom1_d)
-);
+logic [15:0] ch_a[16];                          // channel window address, by channel id
+logic  [7:0] ch_d[16];
+always_comb begin
+    for (int c = 0; c < 16; c++) ch_a[c] = 16'd0;
+    ch_a[0]  = {1'b0, is_t8 ? t8_r0a : is_cc ? cc_r0a : is_gy ? gy_r0a : is_tk ? tk_r0a : is_rr ? rr_r0a : is_po ? po_r0a : tp_r0a};
+    ch_a[1]  = {2'b00, is_t8 ? t8_r1a : is_cc ? cc_r1a : is_gy ? gy_r1a : is_tk ? tk_r1a : is_rr ? rr_r1a : is_po ? po_r1a : tp_r1a};
+    ch_a[2]  = is_t8 ? t8_r2a : is_cc ? cc_r2a : is_gy ? gy_r2a : is_tk ? tk_r2a : is_rr ? rr_r2a : is_po ? po_r2a : tp_r2a;
+    ch_a[3]  = {2'b00, is_cc ? cc_r3a : is_t8 ? {1'b0, t8_r3a} : {2'b00, jf_r3a}};
+    ch_a[4]  = {3'b000, snd_rom_a};
+    ch_a[5]  = {1'b0, blt_rom_a};
+    ch_a[8]  = {1'b0, is_t8 ? t8_r0b_a : gy_r0b_a};
+    ch_a[9]  = {2'b00, gy_r1b_a};
+    ch_a[10] = is_t8 ? t8_r2b_a : is_cc ? cc_r2b_a : gy_r2b_a;
+    ch_a[11] = {4'd0, jf_mcu_a};
+end
 
-dpram_dc #(.widthad_a(16)) rom2
-(
-    .clock_a(clk), .address_a(load_rom2 ? ioctl_addr[15:0] : is_t8 ? t8_r2b_a : is_cc ? cc_r2b_a : gy_r2b_a), .data_a(ioctl_dout), .wren_a(load_rom2), .q_a(rom2b_d),
-    .clock_b(clk), .address_b(is_t8 ? t8_r2a : is_cc ? cc_r2a : is_gy ? gy_r2a : is_tk ? tk_r2a : is_rr ? rr_r2a : is_po ? po_r2a : tp_r2a), .q_b(rom2_d)
-);
+assign rom0_d = ch_d[0];   assign rom1_d = ch_d[1];   assign rom2_d = ch_d[2];   assign rom3_d = ch_d[3];
+assign snd_rom_d = ch_d[4];   assign blt_rom_d = ch_d[5];
+assign rom0b_d = ch_d[8];  assign rom1b_d = ch_d[9];  assign rom2b_d = ch_d[10]; assign jf_mcu_d = ch_d[11];
+
+// Bank owners, registered from rom_map (static once the set is loaded): low 3 bits index the port's channels
+logic [3:0] own_a[NBANK], own_b[NBANK];
+always_ff @(posedge clk)
+    for (int b = 0; b < NBANK; b++) {own_a[b], own_b[b]} <= rom_map[16 + b];
+
+// Bank each channel addresses, and whether it owns it there, registered with the address the banks take
+wire  [3:0] ch_bank[16];
+logic [3:0] rd_bank[16];
+logic       rd_own[16];
+genvar ci;
+generate
+    for (ci = 0; ci < 16; ci = ci + 1) begin : g_ch
+        assign ch_bank[ci] = rom_map[ci][3:0] + {1'b0, ch_a[ci][15:13]};
+        wire [3:0] owner = ch_bank[ci] >= NBANK ? 4'hF : ci < 8 ? own_b[ch_bank[ci]] : own_a[ch_bank[ci]];
+        always_ff @(posedge clk) begin
+            rd_bank[ci] <= ch_bank[ci];
+            rd_own[ci]  <= owner == ci;
+        end
+    end
+endgenerate
+
+wire  [7:0] bank_qa[16], bank_qb[16];               // 15: no bank
+assign bank_qa[15] = 8'd0;
+assign bank_qb[15] = 8'd0;
+always_comb
+    for (int c = 0; c < 16; c++) ch_d[c] = ~rd_own[c] ? 8'd0 : c < 8 ? bank_qb[rd_bank[c]] : bank_qa[rd_bank[c]];
+
+genvar bi;
+generate
+    for (bi = 0; bi < NBANK; bi = bi + 1) begin : g_bank
+        wire        ld  = ioctl_wr0 && ioctl_addr[24:13] == 12'(bi);
+        wire [12:0] a_b = ch_a[{1'b0, own_b[bi][2:0]}][12:0];      // F (none): channel 7, unused
+        wire [12:0] a_a = ch_a[{1'b1, own_a[bi][2:0]}][12:0];      // F (none): channel 15, unused
+        dpram_dc #(.widthad_a(13)) rom
+        (
+            .clock_a(clk), .address_a(ld ? ioctl_addr[12:0] : a_a), .data_a(ioctl_dout), .wren_a(ld), .q_a(bank_qa[bi]),
+            .clock_b(clk), .address_b(a_b), .q_b(bank_qb[bi])
+        );
+    end
+endgenerate
 
 timeplt_board timeplt
 (
@@ -449,15 +509,14 @@ tutankhm_board tutankhm
     .dsw0(dsw0),
     .dsw1(dsw1),
 
-    .ioctl_addr(ioctl_addr),
-    .ioctl_dout(ioctl_dout),
-    .ioctl_wr0(ioctl_wr0),
     .rom0_a(tk_r0a),
     .rom0_d(rom0_d),
     .rom1_a(tk_r1a),
     .rom1_d(rom1_d),
     .rom2_a(tk_r2a),
     .rom2_d(rom2_d),
+    .blt_rom_a(blt_rom_a),
+    .blt_rom_d(blt_rom_d),
 
     .crt_flip(crt_flip),
     .h_adj(h_adj),
@@ -553,8 +612,6 @@ gyruss_board gyruss
 logic [16:0] tc_rom_addr;
 assign sdr_addr = {3'd0, tc_rom_addr};             // TC8830F ROM at SDRAM byte 0 (index 2 offset 0)
 
-wire load_snd = ioctl_wr0 && ioctl_addr[24:14] == 11'h002;     // 0x08000-0x0BFFF
-
 logic signed [15:0] tp_audio, jf_audio;
 
 timeplt_sound sound
@@ -562,9 +619,8 @@ timeplt_sound sound
     .clk(clk),
     .reset(reset | is_jf | is_gy | is_cc | is_t8 | tp_wdr | po_wdr | rr_wdr | tk_wdr),
     .pause(pause),
-    .ioctl_addr(ioctl_addr),
-    .ioctl_dout(ioctl_dout),
-    .ioctl_wr(load_snd),
+    .rom_a(snd_rom_a),
+    .rom_q(snd_rom_d),
     .latch(is_tk ? tk_latch : is_rr ? rr_latch : is_po ? po_latch : tp_latch),
     .irq_trig(is_tk ? tk_irq : is_rr ? rr_irq : is_po ? po_irq : tp_irq),
     .mute(is_tk ? tk_mute : is_rr ? rr_mute : is_po ? po_mute : tp_mute),
@@ -587,9 +643,10 @@ junofrst_sound jf_sound
     .clk(clk),
     .reset(reset | ~is_jf | tk_wdr),
     .pause(pause),
-    .ioctl_addr(ioctl_addr),
-    .ioctl_dout(ioctl_dout),
-    .ioctl_wr0(ioctl_wr0),
+    .rom3_a(jf_r3a),
+    .rom3_d(rom3_d),
+    .mcu_rom_a(jf_mcu_a),
+    .mcu_rom_d(jf_mcu_d),
     .latch(tk_latch),
     .irq_trig(tk_irq),
     .mute(tk_mute),
@@ -651,6 +708,8 @@ circusc_board circusc
     .rom1_d(rom1_d),
     .rom2_a(cc_r2a),
     .rom2_d(rom2_d),
+    .rom3_a(cc_r3a),
+    .rom3_d(rom3_d),
 
     .crt_flip(crt_flip),
     .h_adj(h_adj),
@@ -721,6 +780,8 @@ tp84_board tp84
     .rom1_d(rom1_d),
     .rom2_a(t8_r2a),
     .rom2_d(rom2_d),
+    .rom3_a(t8_r3a),
+    .rom3_d(rom3_d),
 
     .crt_flip(crt_flip),
     .h_adj(h_adj),

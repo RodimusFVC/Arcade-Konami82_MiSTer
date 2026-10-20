@@ -1,0 +1,128 @@
+<misterromdescription>
+    <name>Time Pilot '84 (Set 2)</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Time Pilot '84</series>
+    <year>1984</year>
+    <manufacturer>Konami</manufacturer>
+    <category>Shooter</category>
+
+    <setname>tp84a</setname>
+    <parent>tp84</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Konami82</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (cw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>8-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>2</num_buttons>
+    <buttons names="Fire,Button 2,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FF,33">
+        <dip name="Coin A" bits="0,3" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Free Play" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Coin B" bits="4,7" ids="4C/1C,3C/1C,2C/1C,3C/2C,4C/3C,1C/1C,3C/4C,2C/3C,1C/2C,2C/5C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,Invalid" values="2,5,8,4,1,15,3,7,14,6,13,12,11,10,9,0"/>
+        <dip name="Cabinet" bits="10" ids="Upright,Cocktail"/>
+        <dip name="Bonus Life" bits="11,12" ids="10000 and every 50000,20000 and every 60000,30000 and every 70000,40000 and every 80000" values="3,2,1,0"/>
+        <dip name="Difficulty" bits="13,14" ids="Easy,Normal,Hard,Hardest" values="3,2,1,0"/>
+        <dip name="Demo Sounds" bits="15" ids="Off,On" values="1,0"/>
+        <dip name="Lives" bits="8,9" ids="3,4,5,7" values="3,2,1,0"/>
+    </switches>
+
+    <!-- Index 0: 8K ROM banks (rtl/konami82_board.sv), PROMs at their window address in rtl/boards/tp84_board.sv -->
+    <rom index="0" md5="none" zip="tp84a.zip|tp84.zip">
+        <part crc="cd682f30" name="388_e09.12a"/>
+        <part crc="888d4bd6" name="388_e10.13a"/>
+        <part crc="9a220b39" name="388_e11.14a"/>
+        <part crc="fac98397" name="388_e12.15a"/>
+        <part crc="605f61c7" name="388_f04.7j"/>
+        <part crc="e97d5093" name="388_f05.8j"/>
+        <part crc="dbd5333b" name="388_f06.9j"/>
+        <part crc="8fbdb4ef" name="388_f07.10j"/>
+        <part crc="05c7508f" name="388_h02.2j"/>
+        <part crc="498d90b7" name="388_d01.1j"/>
+        <part crc="36462ff1" name="388_f08.10d"/>
+        <part crc="c44414da" name="388j13.6a"/>
+        <part repeat="0xA000">00</part>
+        <part crc="d737eaba" name="388d14.2c"/>
+        <part crc="2f6a9a2a" name="388d15.2d"/>
+        <part crc="2e21329b" name="388d16.1e"/>
+        <part crc="61d2d398" name="388d18.1f"/>
+        <part crc="af8f839c" name="388d17.16c"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map, ROM bank map (see Arcade-Konami82.sv) -->
+    <rom index="1">
+        <part>
+            0A 90 00 00 FF FF FF FF 33 FF 80 80 80 00 01 80
+            11 12 16 13 14 00 00 00 03 04 01 02 05 06 00 00
+            0B 0C 09 0A 0D 0E 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 08 00 0A 00 00 00 00 00 00 0B 00 00 00 00 00
+            80 80 80 80 F2 F2 F2 F2 F1 F1 F3 AF FF FF FF FF
+        </part>
+    </rom>
+
+    <!-- Index 3: hiscore config (MAME hiscore.dat), index 4: saved scores -->
+    <rom index="3" md5="none">
+        <part>
+            0B F0 A0 00 00 FF 00 02 00 02 00 01 11 11 00 00
+            00 00 57 A0 00 1E 00 54
+            00 00 57 36 00 03 00 00
+        </part>
+    </rom>
+    <rom index="4"></rom>
+    <nvram index="4" size="33"></nvram>
+
+    <!-- Index 5: MAME artwork, layout table (from default.lay) + PNGs from the artwork zip, as-is -->
+    <!-- OSD Artwork: View 1 = Inst Card -->
+    <rom index="5" md5="none" zip="/mame-artwork/tp84.zip">
+        <part>
+            41 57 01 00 01 00 00 01 E0 00 02 00 00 00 00 00 D8 02 00 02 AC 00 00 00 80 01 00 02 00 00 01 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            02 00 08 FF 39 02 80 00 9F 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+        </part>
+        <part>41 57 49 00</part>
+        <part name="timepilot84_inst.png"/>
+    </rom>
+
+    <remark>Time Pilot '84 (Set 2) (Konami)</remark>
+    <mratimestamp>20261015000000</mratimestamp>
+</misterromdescription>

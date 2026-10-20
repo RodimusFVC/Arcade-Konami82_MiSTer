@@ -10,8 +10,8 @@
 //  8039 INT: LS74 5D set by the Z80's port-14 write, cleared while P2.7 is low (schematic: /CLR = P27).
 //  8039 = T48 (Arnim Laeuger) through t8039_notri_extrom, program on the pmem port (EA low).
 //
-//  ROMs are in the shared blocks (rtl/konami82_board.sv), second ports:
-//    audiocpu 0000-5FFF at ioctl 0x18000 (block 2), audio2 (8039) at ioctl 0x0E000 (block 1)
+//  ROMs are in the banked ROM store (rtl/konami82_board.sv), second ports:
+//    audiocpu 0000-5FFF at window 0x18000 (block 2), audio2 (8039) at window 0x0E000 (block 1)
 //
 //============================================================================
 
@@ -108,7 +108,7 @@ wire cs_rom = mem && a[15:13] < 3'd3;            // 0000-5FFF
 wire cs_ram = mem && a[15:10] == 6'b0110_00;     // 6000-63FF
 wire cs_lat = mem && a[15:12] == 4'h8;           // 8000 sound latch
 
-assign z80_rom_a = {1'b1, a[14:0]};                // block 2 at 0x8000 (ioctl 0x18000)
+assign z80_rom_a = {1'b1, a[14:0]};                // block 2 at 0x8000 (window 0x18000)
 
 logic [7:0] ram_d;
 spram #(.ADDR_WIDTH(10)) ram
@@ -215,7 +215,7 @@ always_ff @(posedge clk) begin
     end
 end
 
-assign mcu_rom_a = {2'b10, mcu_pa};              // block 1 at 0x2000 (ioctl 0x0E000)
+assign mcu_rom_a = {2'b10, mcu_pa};              // block 1 at 0x2000 (window 0x0E000)
 
 // 8039: the shared 8039 in rtl/konami82_board.sv
 assign mcs48_0_i.xtal_en = ce_8m;

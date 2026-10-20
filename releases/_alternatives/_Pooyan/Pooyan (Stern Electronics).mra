@@ -37,33 +37,33 @@
         <dip name="Demo Sounds" bits="15" ids="Off,On" values="1,0"/>
     </switches>
 
-    <!-- Index 0: MAME regions, layout in rtl/boards/pooyan_board.sv -->
+    <!-- Index 0: 8K ROM banks (rtl/konami82_board.sv), PROMs at their window address in rtl/boards/pooyan_board.sv -->
     <rom index="0" md5="none" zip="pooyans.zip|pooyan.zip">
         <part crc="916ae7d7" name="ic22_a4.cpu"/>
         <part crc="8fe38c61" name="ic23_a5.cpu"/>
         <part crc="2660218a" name="ic24_a6.cpu"/>
         <part crc="3d2a10ad" name="ic25_a7.cpu"/>
-        <part crc="fbe2b368" name="xx.7a"/>
-        <part crc="e1795b3d" name="xx.8a"/>
-        <part repeat="0x2000">00</part>
         <part crc="7433aea9" name="ic13_g10.cpu"/>
         <part crc="87c1789e" name="ic14_g9.cpu"/>
-        <part repeat="0x2000">00</part>
         <part crc="b2d8c121" name="6.9a"/>
         <part crc="1097c2b6" name="5.8a"/>
-        <part repeat="0x2000">00</part>
+        <part crc="fbe2b368" name="xx.7a"/>
+        <part crc="e1795b3d" name="xx.8a"/>
+        <part repeat="0x6000">00</part>
         <part crc="a06a6d0e" name="pooyan.pr1"/>
         <part crc="8cd4cd60" name="pooyan.pr3"/>
         <part crc="82748c0b" name="pooyan.pr2"/>
     </rom>
 
-    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <!-- Index 1: board variant, flags, input map, ROM bank map (see Arcade-Konami82.sv) -->
     <rom index="1">
         <part>
             01 90 00 00 FF FF FF FF 7B FF 80 80 80 00 01 80
             11 12 16 13 14 00 00 00 00 00 01 02 05 00 00 00
             00 00 09 0A 0D 00 00 00 00 00 00 00 00 00 00 00
             00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 04 05 00 06 00 00 00 00 00 00 00 00 00 00 00
+            F0 F0 F0 F0 F1 F2 F4 FF FF FF FF FF FF FF FF FF
         </part>
     </rom>
 

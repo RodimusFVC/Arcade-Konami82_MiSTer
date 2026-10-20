@@ -7,13 +7,14 @@
 //  MC6809E (Greg Miller's mc6809is, unmodified, shared in rtl/konami82_board.sv as m6809_0 / m6809_1).
 //  tp84b: the same board with the main CPU's I/O and video RAM moved to 0000-1FFF (b84 = 1).
 //
-//  ioctl index 0 (MRA), images stored as dumped:
-//    0x00000 - 0x07FFF  sprites (shared block 0; second port reads the upper half)
+//  ROM windows (banked ROM store, rtl/konami82_board.sv; PROMs load from index 0 at their window address),
+//  images stored as dumped:
+//    0x00000 - 0x07FFF  sprites (ROM window 0; second port reads the upper half)
 //    0x08000 - 0x0BFFF  (Time Pilot sound board window, unused here)
-//    0x0C000 - 0x0FFFF  tiles (shared block 1)
-//    0x10000 - 0x11FFF  audiocpu 0000-1FFF (shared block 2, second port: rtl/sound/tp84_sound.sv)
-//    0x18000 - 0x1FFFF  cpu1 8000-FFFF (shared block 2)
-//    0x20000 - 0x21FFF  sub E000-FFFF (this board)
+//    0x0C000 - 0x0FFFF  tiles (ROM window 1)
+//    0x10000 - 0x11FFF  audiocpu 0000-1FFF (ROM window 2, second port: rtl/sound/tp84_sound.sv)
+//    0x18000 - 0x1FFFF  cpu1 8000-FFFF (ROM window 2)
+//    0x20000 - 0x21FFF  sub E000-FFFF (ROM window rom3)
 //    0x22000 - 0x224FF  red 2C, green 2D, blue 1E, char lookup 1F, sprite lookup 16C (0x100 each)
 //
 //============================================================================
@@ -36,7 +37,7 @@ module tp84_board
     input  logic  [7:0] ioctl_dout,
     input  logic        ioctl_wr0,
 
-    output logic [14:0] rom0_a,         // shared ROM blocks (rtl/konami82_board.sv): ioctl 0x00000-0x07FFF
+    output logic [14:0] rom0_a,         // banked ROM store (rtl/konami82_board.sv): window 0x00000-0x07FFF
     input  logic  [7:0] rom0_d,
     output logic [14:0] rom0b_a,        //                                            (second port)
     input  logic  [7:0] rom0b_d,
@@ -44,6 +45,8 @@ module tp84_board
     input  logic  [7:0] rom1_d,
     output logic [15:0] rom2_a,         //                                            0x10000-0x1FFFF
     input  logic  [7:0] rom2_d,
+    output logic [12:0] rom3_a,         //                                            0x20000-0x21FFF (sub CPU ROM)
+    input  logic  [7:0] rom3_d,
 
     input  logic        crt_flip,
     input  logic  [3:0] h_adj,          // HSYNC moved 2 pixels per step (signed)
@@ -72,7 +75,6 @@ module tp84_board
 
 /////////////////////////////  ROM storage  /////////////////////////////
 
-wire load_sub  = ioctl_wr0 && ioctl_addr[24:13] == 12'h010;     // 0x20000-0x21FFF
 wire load_prom = ioctl_wr0 && ioctl_addr[24:11] == 14'h0044;    // 0x22000-0x227FF
 wire load_r    = load_prom && ioctl_addr[10:8] == 3'd0;
 wire load_g    = load_prom && ioctl_addr[10:8] == 3'd1;
@@ -82,25 +84,21 @@ wire load_slut = load_prom && ioctl_addr[10:8] == 3'd4;
 
 logic [15:0] cpu_rom_a;
 logic  [7:0] cpu_rom_d;
-assign rom2_a    = cpu_rom_a;                // main CPU ROM in shared block 2
+assign rom2_a    = cpu_rom_a;                // main CPU ROM in ROM window 2
 assign cpu_rom_d = rom2_d;
 
 logic [13:0] tile_rom_a;
 logic  [7:0] tile_rom_d;
-assign rom1_a     = tile_rom_a;              // tiles in shared block 1
+assign rom1_a     = tile_rom_a;              // tiles in ROM window 1
 assign tile_rom_d = rom1_d;
 
-logic [13:0] spr_rom_a;                      // sprites: planes 0-1 at 0x0000, planes 2-3 at 0x4000 (shared block 0)
+logic [13:0] spr_rom_a;                      // sprites: planes 0-1 at 0x0000, planes 2-3 at 0x4000 (ROM window 0)
 assign rom0_a  = {1'b0, spr_rom_a};
 assign rom0b_a = {1'b1, spr_rom_a};
 
-logic [12:0] sub_rom_a;
-logic  [7:0] sub_rom_d;
-dpram_dc #(.widthad_a(13)) rom_sub
-(
-    .clock_a(clk), .address_a(ioctl_addr[12:0]), .data_a(ioctl_dout), .wren_a(load_sub),
-    .clock_b(clk), .address_b(sub_rom_a), .q_b(sub_rom_d)
-);
+logic [12:0] sub_rom_a;                             // sub CPU ROM: ROM window rom3 (0x20000)
+wire   [7:0] sub_rom_d = rom3_d;
+assign       rom3_a    = sub_rom_a;
 
 logic [7:0] pal_a, pal_r, pal_g, pal_b;
 dpram_dc #(.widthad_a(8)) prom_r

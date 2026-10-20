@@ -6,7 +6,7 @@
 //  Written from the Time Pilot '84 schematics and MAME tp84.cpp (Aaron Giles).
 //  Z80 (14.31818 / 4), three SN76489A (14.31818 / 8), each through a switchable RC filter into one mix.
 //
-//  Z80 ROM 0000-1FFF in shared block 2, second port (ioctl 0x10000, rtl/konami82_board.sv)
+//  Z80 ROM 0000-1FFF in ROM window 2, second port (window 0x10000, rtl/konami82_board.sv)
 //
 //============================================================================
 
@@ -87,7 +87,7 @@ wire cs_tmr = mem && a[15:13] == 3'b100;         // 8000 timer
 wire cs_flt = mem && a[15:13] == 3'b101;         // A000 filters (address bits)
 wire cs_snd = mem && a[15:13] == 3'b110;         // C000-C004
 
-assign z80_rom_a = {2'b00, a[13:0]};             // block 2 at 0x0000 (ioctl 0x10000)
+assign z80_rom_a = {2'b00, a[13:0]};             // block 2 at 0x0000 (window 0x10000)
 
 logic [7:0] ram_d;
 spram #(.ADDR_WIDTH(10)) ram

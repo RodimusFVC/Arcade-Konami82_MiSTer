@@ -15,9 +15,8 @@ module timeplt_sound
     input  logic        reset,
     input  logic        pause,
 
-    input  logic [24:0] ioctl_addr,
-    input  logic  [7:0] ioctl_dout,
-    input  logic        ioctl_wr,       // sound ROM download strobe
+    output logic [12:0] rom_a,          // sound ROM: banked ROM store (rtl/konami82_board.sv), window 0x08000
+    input  logic  [7:0] rom_q,
 
     input  logic  [7:0] latch,          // main CPU sound command
     input  logic        irq_trig,       // main latch bit: rising edge interrupts the sound CPU
@@ -89,12 +88,12 @@ wire cs_ay1 = mem && a[15:13] == 3'b010;         // 4000 data, 5000 address
 wire cs_ay2 = mem && a[15:13] == 3'b011;         // 6000 data, 7000 address
 wire cs_flt = mem && a[15];                      // 8000-FFFF: filter select = address lines
 
+// ROM 8K: every set's sound program fits; 2000-2FFF (no ROM) reads 0, as the empty upper half of the old 16K block did.
 logic [7:0] rom_d, ram_d;
-dpram_dc #(.widthad_a(14)) rom
-(
-    .clock_a(clk), .address_a(ioctl_addr[13:0]), .data_a(ioctl_dout), .wren_a(ioctl_wr),
-    .clock_b(clk), .address_b(a[13:0]), .q_b(rom_d)
-);
+logic       rom_hi = 1'b0;
+assign rom_a = a[12:0];
+always @(posedge clk) rom_hi <= a[13];
+assign rom_d = rom_hi ? 8'h00 : rom_q;
 
 spram #(.ADDR_WIDTH(10)) ram
 (

@@ -33,15 +33,17 @@
         <dip name="Coin A" bits="8" ids="2C/1C,1C/1C" values="1,0"/>
     </switches>
 
-    <!-- Index 0: MAME regions, layout in rtl/boards/timeplt_board.sv -->
+    <!-- Index 0: 8K ROM banks (rtl/konami82_board.sv), PROMs at their window address in rtl/boards/timeplt_board.sv -->
     <rom index="0" md5="none" zip="chkun.zip">
-        <part crc="c5879f9b" name="n1.16a"/>
+        <part crc="c5879f9b" name="n1.16a" offset="0x0" length="0x2000"/>
+        <part crc="c5879f9b" name="n1.16a" offset="0x2000" length="0x2000"/>
         <part crc="80cc55da" name="12.14a"/>
-        <part repeat="0x2000">00</part>
+        <part crc="776427c0" name="13.4d" offset="0x0" length="0x2000"/>
+        <part crc="776427c0" name="13.4d" offset="0x2000" length="0x2000"/>
+        <part crc="0cb76a48" name="14.8h" offset="0x0" length="0x2000"/>
+        <part crc="0cb76a48" name="14.8h" offset="0x2000" length="0x2000"/>
         <part crc="1f1463ca" name="15.3l"/>
-        <part repeat="0x2000">00</part>
-        <part crc="776427c0" name="13.4d"/>
-        <part crc="0cb76a48" name="14.8h"/>
+        <part repeat="0x4000">00</part>
         <part crc="34c91839" name="3.2j"/>
         <part crc="463b2b07" name="2.1h"/>
         <part crc="4bbb2150" name="4.10h"/>
@@ -54,13 +56,15 @@
         <part crc="70e902eb" name="v2.9k"/>
     </rom>
 
-    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <!-- Index 1: board variant, flags, input map, ROM bank map (see Arcade-Konami82.sv) -->
     <rom index="1">
         <part>
             05 90 00 00 FF FF FF 7F FF FF 80 80 80 00 01 80
             11 12 21 13 00 00 00 00 08 00 06 07 05 20 00 00
             00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
             00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 03 05 00 07 00 00 00 00 00 00 00 00 00 00 00
+            F0 F0 F0 F1 F1 F2 F2 F4 FF FF FF FF FF FF FF FF
         </part>
     </rom>
 

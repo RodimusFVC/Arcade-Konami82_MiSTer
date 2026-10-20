@@ -43,32 +43,32 @@
         <dip name="Stop at Junctions" bits="15" ids="No,Yes" values="1,0"/>
     </switches>
 
-    <!-- Index 0: MAME regions, layout in rtl/boards/timeplt_board.sv -->
+    <!-- Index 0: 8K ROM banks (rtl/konami82_board.sv), PROMs at their window address in rtl/boards/timeplt_board.sv -->
     <rom index="0" md5="none" zip="psurge.zip">
         <part crc="05f9ba12" name="p1"/>
         <part crc="3ff41576" name="p2"/>
         <part crc="e8fe120a" name="p3"/>
-        <part repeat="0x2000">00</part>
-        <part crc="b52d01fa" name="p6"/>
-        <part crc="9db5c0ce" name="p7"/>
-        <part repeat="0x2000">00</part>
-        <part crc="26fd7f81" name="p4"/>
-        <part repeat="0x2000">00</part>
         <part crc="6066ec8e" name="p5"/>
         <part crc="e8ca87b9" name="tm5"/>
+        <part crc="26fd7f81" name="p4"/>
+        <part crc="b52d01fa" name="p6"/>
+        <part crc="9db5c0ce" name="p7"/>
+        <part repeat="0x6000">00</part>
         <part crc="34c91839" name="timeplt.b4"/>
         <part crc="463b2b07" name="timeplt.b5"/>
         <part crc="4bbb2150" name="timeplt.e9"/>
         <part crc="f7b7663e" name="timeplt.e12"/>
     </rom>
 
-    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <!-- Index 1: board variant, flags, input map, ROM bank map (see Arcade-Konami82.sv) -->
     <rom index="1">
         <part>
             03 10 00 00 FF FF FF FF 7F FF 80 80 80 00 01 80
             11 12 16 13 14 00 00 00 03 04 01 02 05 00 00 00
             0B 0C 09 0A 0D 00 00 00 00 00 00 00 00 00 00 00
             00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 05 03 00 06 00 00 00 00 00 00 00 00 00 00 00
+            F0 F0 F0 F2 F2 F1 F4 FF FF FF FF FF FF FF FF FF
         </part>
     </rom>
 

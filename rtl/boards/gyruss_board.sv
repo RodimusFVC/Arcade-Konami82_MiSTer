@@ -8,7 +8,7 @@
 //  KONAMI-1 = Greg Miller's MC6809 (unmodified) + the external opcode decrypter used on Roc'n Rope.
 //  32x32 2bpp tilemap (attr bit 4 = tile over sprites), 48 8x16 4bpp sprites, 396 x 256 timing.
 //
-//  ioctl index 0 (MRA); the main windows are the shared ROM blocks in rtl/konami82_board.sv:
+//  ROM windows (banked ROM store, rtl/konami82_board.sv; PROMs load from index 0 at their window address):
 //    0x00000 - 0x05FFF  maincpu 0000-5FFF        (block 0, port B)
 //    0x06000 - 0x07FFF  sub E000-FFFF            (block 0, port A)
 //    0x0C000 - 0x0DFFF  tiles                    (block 1, port B)
@@ -37,7 +37,7 @@ module gyruss_board
     input  logic  [7:0] ioctl_dout,
     input  logic        ioctl_wr0,
 
-    output logic [14:0] rom0_a,         // shared ROM blocks (rtl/konami82_board.sv): main CPU
+    output logic [14:0] rom0_a,         // banked ROM store (rtl/konami82_board.sv): main CPU
     input  logic  [7:0] rom0_d,
     output logic [14:0] rom0b_a,        //   sub CPU (block 0 second port)
     input  logic  [7:0] rom0b_d,

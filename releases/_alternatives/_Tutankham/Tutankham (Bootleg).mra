@@ -38,18 +38,8 @@
         <dip name="Demo Sounds" bits="15" ids="Off,On" values="1,0"/>
     </switches>
 
-    <!-- Index 0: MAME regions, layout in rtl/boards/tutankhm_board.sv -->
+    <!-- Index 0: 8K ROM banks (rtl/konami82_board.sv), PROMs at their window address in rtl/boards/tutankhm_board.sv -->
     <rom index="0" md5="none" zip="tutankhmb.zip|tutankhm.zip">
-        <part crc="37794533" name="t1.1h"/>
-        <part crc="a0f02c85" name="t2.2h"/>
-        <part crc="0c41e644" name="t3.3h"/>
-        <part crc="bd06fad0" name="t4.4h"/>
-        <part crc="bf9fd9b0" name="t5.5h"/>
-        <part crc="39cd1b22" name="t6.6h"/>
-        <part repeat="0x2000">00</part>
-        <part crc="b52d01fa" name="t16.7a"/>
-        <part crc="9db5c0ce" name="t17.8a"/>
-        <part repeat="0x6000">00</part>
         <part crc="55deafe2" name="t7.1i"/>
         <part crc="6615eff3" name="t8.2i"/>
         <part crc="a10d4444" name="t9.3i"/>
@@ -59,15 +49,26 @@
         <part crc="c7250b9a" name="t13.7i"/>
         <part crc="685a623e" name="t14.8i"/>
         <part crc="8ea9c6a6" name="t15.9i"/>
+        <part repeat="0x1000">00</part>
+        <part crc="37794533" name="t1.1h"/>
+        <part crc="a0f02c85" name="t2.2h"/>
+        <part crc="0c41e644" name="t3.3h"/>
+        <part crc="bd06fad0" name="t4.4h"/>
+        <part crc="bf9fd9b0" name="t5.5h"/>
+        <part crc="39cd1b22" name="t6.6h"/>
+        <part crc="b52d01fa" name="t16.7a"/>
+        <part crc="9db5c0ce" name="t17.8a"/>
     </rom>
 
-    <!-- Index 1: board variant, flags, input map (see Arcade-Konami82.sv) -->
+    <!-- Index 1: board variant, flags, input map, ROM bank map (see Arcade-Konami82.sv) -->
     <rom index="1">
         <part>
             06 91 00 00 FF FF FF FF 6B FF 80 80 80 00 01 80
             11 12 16 13 14 00 00 00 03 04 01 02 2F 2E 07 00
             0B 0C 09 0A 31 30 0F 00 00 00 00 00 00 00 00 00
             00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            05 00 00 00 08 00 00 00 00 00 00 00 00 00 00 00
+            F2 F2 F2 F2 F2 F0 F0 F0 F4 FF FF FF FF FF FF FF
         </part>
     </rom>
 

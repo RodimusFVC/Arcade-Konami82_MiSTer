@@ -9,7 +9,7 @@
 //  bits on P2 (read back on AY port A with a /512 timer) and drops P2.7 to clear its interrupt.
 //  8039 = T48 (Arnim Laeuger) through t8039_notri_extrom, program ROM on the pmem port (EA low).
 //
-//  ioctl index 0 (MRA):
+//  ROM windows (banked ROM store, rtl/konami82_board.sv):
 //    0x20000 - 0x20FFF  audiocpu
 //    0x21000 - 0x21FFF  mcu
 //
@@ -21,9 +21,10 @@ module junofrst_sound
     input  logic        reset,
     input  logic        pause,
 
-    input  logic [24:0] ioctl_addr,
-    input  logic  [7:0] ioctl_dout,
-    input  logic        ioctl_wr0,
+    output logic [11:0] rom3_a,         // audiocpu ROM: banked ROM store rom3 (rtl/konami82_board.sv, window 0x20000)
+    input  logic  [7:0] rom3_d,
+    output logic [11:0] mcu_rom_a,      // 8039 ROM: banked ROM store (window 0x21000)
+    input  logic  [7:0] mcu_rom_d,
 
     input  logic  [7:0] latch,          // main CPU sound command (8050)
     input  logic        irq_trig,       // main CPU 8040 D0: rising edge interrupts the Z80
@@ -37,9 +38,6 @@ module junofrst_sound
     input  chip_pool_pkg::mcs48_o_t mcs48_0_o,
     output logic signed [15:0] audio
 );
-
-wire load_z80 = ioctl_wr0 && ioctl_addr[24:12] == 13'h0020;    // 0x20000-0x20FFF
-wire load_mcu = ioctl_wr0 && ioctl_addr[24:12] == 13'h0021;    // 0x21000-0x21FFF
 
 // 14.31818 MHz / 8 = 1.789772 MHz from 49.152 MHz, exact on average
 logic [25:0] acc = 26'd0;
@@ -108,12 +106,9 @@ wire cs_ay   = mem && a[15:12] == 4'h4;          // 4000 address, 4001 read, 400
 wire cs_lat2 = mem && a[15:12] == 4'h5;          // 5000 8039 command latch
 wire cs_mirq = mem && a[15:12] == 4'h6;          // 6000 8039 interrupt
 
-logic [7:0] rom_d, ram_d;
-dpram_dc #(.widthad_a(12)) rom
-(
-    .clock_a(clk), .address_a(ioctl_addr[11:0]), .data_a(ioctl_dout), .wren_a(load_z80),
-    .clock_b(clk), .address_b(a[11:0]), .q_b(rom_d)
-);
+logic [7:0] ram_d;
+wire  [7:0] rom_d = rom3_d;
+assign      rom3_a = a[11:0];
 
 spram #(.ADDR_WIDTH(10)) ram
 (
@@ -160,7 +155,7 @@ end
 
 logic [7:0] latch2 = 8'h00;
 logic       mcu_irq = 1'b0;
-logic [7:0] mcu_p1, mcu_p2, mcu_rom_d;
+logic [7:0] mcu_p1, mcu_p2;
 logic [11:0] mcu_pa;
 logic       mcu_rd_n;
 logic       wr_d = 1'b0;
@@ -180,11 +175,7 @@ end
 
 assign mcu_status = mcu_p2[6:4];
 
-dpram_dc #(.widthad_a(12)) mcu_rom
-(
-    .clock_a(clk), .address_a(ioctl_addr[11:0]), .data_a(ioctl_dout), .wren_a(load_mcu),
-    .clock_b(clk), .address_b(mcu_pa), .q_b(mcu_rom_d)
-);
+assign mcu_rom_a = mcu_pa;
 
 // 8039: the shared 8039 in rtl/konami82_board.sv
 assign mcs48_0_i.xtal_en = ce_8m;
