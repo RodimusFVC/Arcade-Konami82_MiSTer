@@ -345,6 +345,21 @@ generate
     end
 endgenerate
 
+/////////////////////////////  Shared bitmap RAM  /////////////////////////////
+
+// 32K x 10: the Tutankham / Juno First bitmap (low 8 bits, CPU / blitter on port A, video on port B), or the Time
+// Pilot board's CRT Flip frame buffer A (2 pixels per word, written on port A, shown from port B)
+logic [14:0] tk_bmp_aa, tk_bmp_ba, tp_fba_wa, tp_fba_ra;
+logic  [7:0] tk_bmp_ad;
+logic        tk_bmp_we, tp_fba_we;
+logic  [9:0] tp_fba_wd, bmp_qa, bmp_qb;
+dpram_dc #(.widthad_a(15), .width_a(10)) bmp_ram
+(
+    .clock_a(clk), .address_a(is_tk ? tk_bmp_aa : tp_fba_wa), .data_a(is_tk ? {2'b00, tk_bmp_ad} : tp_fba_wd),
+    .wren_a(is_tk ? tk_bmp_we : tp_fba_we & is_tp), .q_a(bmp_qa),
+    .clock_b(clk), .address_b(is_tk ? tk_bmp_ba : tp_fba_ra), .q_b(bmp_qb)
+);
+
 timeplt_board timeplt
 (
     .clk(clk),
@@ -392,7 +407,13 @@ timeplt_board timeplt
     .hs_address(hs_address),
     .hs_data_in(hs_data_in),
     .hs_data_out(tp_hs_d),
-    .hs_write(hs_write & is_tp)
+    .hs_write(hs_write & is_tp),
+
+    .fba_wa(tp_fba_wa),
+    .fba_wd(tp_fba_wd),
+    .fba_we(tp_fba_we),
+    .fba_ra(tp_fba_ra),
+    .fba_q(bmp_qb)
 );
 
 pooyan_board pooyan
@@ -541,7 +562,14 @@ tutankhm_board tutankhm
     .hs_address(hs_address),
     .hs_data_in(hs_data_in),
     .hs_data_out(tk_hs_d),
-    .hs_write(hs_write & is_tk)
+    .hs_write(hs_write & is_tk),
+
+    .bmp_a_addr(tk_bmp_aa),
+    .bmp_a_d(tk_bmp_ad),
+    .bmp_a_we(tk_bmp_we),
+    .bmp_a_q(bmp_qa[7:0]),
+    .bmp_b_addr(tk_bmp_ba),
+    .bmp_b_q(bmp_qb[7:0])
 );
 
 assign ce_pix       = is_t8 ? t8_ce   : is_cc ? cc_ce   : is_gy ? gy_ce   : is_tk ? tk_ce   : is_rr ? rr_ce   : is_po ? po_ce   : tp_ce;

@@ -66,7 +66,14 @@ module tutankhm_board
     input  logic [15:0] hs_address,
     input  logic  [7:0] hs_data_in,
     output logic  [7:0] hs_data_out,
-    input  logic        hs_write
+    input  logic        hs_write,
+
+    output logic [14:0] bmp_a_addr,     // bitmap RAM, shared in rtl/konami82_board.sv: CPU / blitter port
+    output logic  [7:0] bmp_a_d,
+    output logic        bmp_a_we,
+    input  logic  [7:0] bmp_a_q,
+    output logic [14:0] bmp_b_addr,     //                                            video port
+    input  logic  [7:0] bmp_b_q
 );
 
 /////////////////////////////  ROM storage  /////////////////////////////
@@ -239,12 +246,13 @@ wire wr = fall_e & ~cpu_rw;
 logic [14:0] vram_va, blt_va;
 logic  [7:0] vram_cpu_d, vram_vd, blt_wd;
 logic        blt_we;
-dpram_dc #(.widthad_a(15)) vram
-(
-    .clock_a(clk), .address_a(blt_busy ? blt_va : cpu_a[14:0]), .data_a(blt_busy ? blt_wd : cpu_do),
-    .wren_a(blt_busy ? blt_we : cs_vram & wr), .q_a(vram_cpu_d),
-    .clock_b(clk), .address_b(vram_va), .q_b(vram_vd)
-);
+// (the RAM itself is in rtl/konami82_board.sv, shared with the Time Pilot board's CRT Flip frame buffer)
+assign bmp_a_addr = blt_busy ? blt_va : cpu_a[14:0];
+assign bmp_a_d    = blt_busy ? blt_wd : cpu_do;
+assign bmp_a_we   = blt_busy ? blt_we : cs_vram & wr;
+assign vram_cpu_d = bmp_a_q;
+assign bmp_b_addr = vram_va;
+assign vram_vd    = bmp_b_q;
 
 // Work RAM 8000-8FFF (Tutankham uses 8800-8FFF, Juno First 8100-8FFF); second port for the hiscore system
 logic [7:0] ram_cpu_d;

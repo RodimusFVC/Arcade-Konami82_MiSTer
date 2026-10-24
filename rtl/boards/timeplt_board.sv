@@ -72,7 +72,13 @@ module timeplt_board
     input  logic [15:0] hs_address,
     input  logic  [7:0] hs_data_in,
     output logic  [7:0] hs_data_out,
-    input  logic        hs_write
+    input  logic        hs_write,
+
+    output logic [14:0] fba_wa,         // CRT Flip frame buffer A = the Tutankham bitmap RAM (rtl/konami82_board.sv)
+    output logic  [9:0] fba_wd,
+    output logic        fba_we,
+    output logic [14:0] fba_ra,
+    input  logic  [9:0] fba_q
 );
 
 /////////////////////////////  ROM storage  /////////////////////////////
@@ -180,7 +186,7 @@ logic [7:0] mainlatch = 8'h00;
 wire is_ps     = sub == 2'd1;                 // Power Surge
 wire is_bk     = sub[1];                       // Bikkuri Card / Chance Kun board
 logic hop_status = 1'b0;                       // coin hopper status line (see below)
-wire tflip     = ~mainlatch[1] ^ crt_flip;     // MAME flips only the tilemap with the game's flip
+wire tflip     = ~mainlatch[1];                // MAME flips only the tilemap with the game's flip; CRT Flip = frame buffer below
 wire video_en  = mainlatch[4] | is_ps;         // Power Surge has no video enable
 
 /////////////////////////////  Main CPU  /////////////////////////////
@@ -477,7 +483,7 @@ always_ff @(posedge clk) begin
         SP_R1: begin sp_byte <= spr_rom_d; sp_k <= 2'd0; sp_st <= SP_PIX; end
         SP_PIX: begin
             if (!sp_px[8] && sp_pen != 2'd0) begin
-                lb_wr_a <= sp_px[7:0] ^ {8{crt_flip}};
+                lb_wr_a <= sp_px[7:0];
                 lb_wr_d <= {sp_attr[5:0], sp_pen};
                 lb_wr   <= 1'b1;
             end
@@ -499,7 +505,7 @@ always_ff @(posedge clk) begin
 
     // a new line starts: draw the line after it
     if (ce_pix && hcnt == 9'd128) begin
-        sp_line <= (vcnt[7:0] + 8'd1) ^ {8{crt_flip}};
+        sp_line <= vcnt[7:0] + 8'd1;
         sp_buf  <= ~vcnt[0];
         sp_slot <= 5'd31;
         sp_st   <= SP_Y0;
@@ -516,6 +522,8 @@ logic [1:0] s1_tpen;
 logic       hs_d, vs_d, hb_d, vb_d;
 logic [2:0] mix_st = 3'd0;
 logic       s2_spr;
+logic [4:0] fb_pix;                             // CRT Flip: pixel of the shown frame buffer (below)
+wire  [4:0] pal_live = {~s2_spr, lut_d[3:0]};
 
 always_ff @(posedge clk) begin
     clr_wr <= 1'b0;
@@ -543,13 +551,80 @@ always_ff @(posedge clk) begin
                 mix_st <= 3'd3;
             end
             3'd3: mix_st <= 3'd4;
-            3'd4: begin pal_a <= {~s2_spr, lut_d[3:0]}; mix_st <= 3'd5; end
+            3'd4: begin pal_a <= crt_flip ? fb_pix : pal_live; mix_st <= 3'd5; end
             3'd5: mix_st <= 3'd6;
             3'd6: mix_st <= 3'd0;
             default: mix_st <= 3'd0;
         endcase
     end
 end
+
+/////////////////////////////  CRT Flip frame buffer  /////////////////////////////
+
+// The game multiplexes the cloud sprites off the beam (C000 read), so the board must draw in its own line order.
+// CRT Flip draws unflipped into one of two frame buffers (256 x 224 visible, 5-bit palette index, 2 pixels per
+// 10-bit word) and shows the other read back rotated 180: one frame of delay, only while CRT Flip is on.
+// Buffer A is the Tutankham bitmap RAM (rtl/konami82_board.sv); buffer B is here, 16K + 8K + 4K words = rows 0-223.
+logic        fb_w = 1'b0;                       // buffer being written (0 = A); the other is shown
+logic  [1:0] fb_ok = 2'd0;                      // frame starts since CRT Flip came on; shown from 2 (a whole frame)
+logic  [7:0] px_h, px_v;                        // raster position of the pixel in the mixer pipeline
+logic  [4:0] fb_even;                           // even pixel, written with its odd neighbour
+logic [14:0] fb_wa, fb_ra;
+logic  [9:0] fb_wd;
+logic        fb_we = 1'b0;
+logic        fb_rbuf, fb_rhalf;
+wire   [7:0] px_row = px_v - 8'd16;             // visible line 0..223 (vcnt 272..495)
+wire   [7:0] rd_row = 8'd239 - vcnt[7:0];       // line shown here, rotated
+wire   [7:0] rd_col = ~hcnt[7:0];
+
+always_ff @(posedge clk) begin
+    fb_we <= 1'b0;
+    if (vblank_start) begin
+        fb_w <= ~fb_w;
+        if (fb_ok != 2'd2) fb_ok <= fb_ok + 2'd1;
+    end
+    if (!crt_flip) fb_ok <= 2'd0;
+    if (ce_pix) begin
+        px_h     <= hcnt[7:0];
+        px_v     <= vcnt[7:0];
+        fb_ra    <= {rd_row, rd_col[7:1]};
+        fb_rhalf <= rd_col[0];
+        fb_rbuf  <= ~fb_w;
+    end else if (mix_st == 3'd4 && !hb_d && !vb_d && crt_flip) begin
+        if (!px_h[0]) fb_even <= pal_live;
+        else begin
+            fb_wa <= {px_row, px_h[7:1]};
+            fb_wd <= {pal_live, fb_even};
+            fb_we <= 1'b1;
+        end
+    end
+end
+
+assign fba_wa = fb_wa;
+assign fba_wd = fb_wd;
+assign fba_we = fb_we & ~fb_w;
+assign fba_ra = fb_ra;
+
+logic [9:0] fbb_q0, fbb_q1, fbb_q2;
+wire        fbb_we = fb_we & fb_w;
+dpram_dc #(.widthad_a(14), .width_a(10)) fbb0        // rows 0-127
+(
+    .clock_a(clk), .address_a(fb_wa[13:0]), .data_a(fb_wd), .wren_a(fbb_we & ~fb_wa[14]),
+    .clock_b(clk), .address_b(fb_ra[13:0]), .q_b(fbb_q0)
+);
+dpram_dc #(.widthad_a(13), .width_a(10)) fbb1        // rows 128-191
+(
+    .clock_a(clk), .address_a(fb_wa[12:0]), .data_a(fb_wd), .wren_a(fbb_we & fb_wa[14:13] == 2'b10),
+    .clock_b(clk), .address_b(fb_ra[12:0]), .q_b(fbb_q1)
+);
+dpram_dc #(.widthad_a(12), .width_a(10)) fbb2        // rows 192-223
+(
+    .clock_a(clk), .address_a(fb_wa[11:0]), .data_a(fb_wd), .wren_a(fbb_we & fb_wa[14:12] == 3'b110),
+    .clock_b(clk), .address_b(fb_ra[11:0]), .q_b(fbb_q2)
+);
+wire [9:0] fbb_q = ~fb_ra[14] ? fbb_q0 : ~fb_ra[13] ? fbb_q1 : fbb_q2;
+wire [9:0] fb_q  = fb_rbuf ? fbb_q : fba_q;
+assign fb_pix = fb_rhalf ? fb_q[9:5] : fb_q[4:0];
 
 // Resistor DAC: 1.2K / 820 / 560 / 470 / 390 per gun (MAME weights 0x19, 0x24, 0x35, 0x40, 0x4D)
 function automatic [7:0] dac5(input [4:0] b);
@@ -563,7 +638,7 @@ always_ff @(posedge clk) begin
         video_vblank <= vb_d;
         video_hs     <= hs_d;
         video_vs     <= vs_d;
-        if (hb_d | vb_d | ~video_en) begin
+        if (hb_d | vb_d | ~video_en | (crt_flip & ~fb_ok[1])) begin
             video_r <= 8'd0;
             video_g <= 8'd0;
             video_b <= 8'd0;
