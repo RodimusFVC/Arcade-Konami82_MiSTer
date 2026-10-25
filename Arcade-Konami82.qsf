@@ -283,27 +283,3 @@ set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to BTN_*
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 source files.qip
 set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
-set_global_assignment -name SYSTEMVERILOG_FILE "Arcade-Konami82.sv"
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/konami82_board.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/timeplt_board.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/pooyan_board.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/rocnrope_board.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/tutankhm_board.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/gyruss_board.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/video/k084.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/timeplt_sound.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/junofrst_sound.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/gyruss_sound.sv
-set_global_assignment -name QIP_FILE rtl/cpu/T80/T80.qip
-set_global_assignment -name QIP_FILE rtl/cpu/i8039/i8039.qip
-set_global_assignment -name VERILOG_FILE rtl/cpu/MC6809/mc6809is.v
-set_global_assignment -name QIP_FILE rtl/sound/jt49/hdl/jt49.qip
-set_global_assignment -name VERILOG_FILE rtl/mister_custom/pause.v
-set_global_assignment -name VERILOG_FILE rtl/mister_custom/hiscore.v
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/sound/tc8830f.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/ram_rom/konami82_sdrom.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/ram_rom/sdram_phase_cal.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/ram_rom/sdram_phase_ctl.sv
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/ram_rom/sdram.sv
-set_global_assignment -name VHDL_FILE rtl/ram_rom/dpram_dc.vhd
-set_global_assignment -name VHDL_FILE rtl/ram_rom/spram.vhd
